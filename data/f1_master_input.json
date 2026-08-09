@@ -1,0 +1,494 @@
+{
+  "version": "1.0",
+  "note": "Synthetic hackathon prototype data; not real F1 operational data.",
+  "scenario": {
+    "circuit": "F1 Demo Circuit",
+    "attendance": 120000,
+    "tick_seconds": 10
+  },
+  "nodes": [
+    {
+      "id": "GATE_A",
+      "type": "gate",
+      "capacity": 6000
+    },
+    {
+      "id": "GATE_B",
+      "type": "gate",
+      "capacity": 7200
+    },
+    {
+      "id": "GATE_C",
+      "type": "gate",
+      "capacity": 6500
+    },
+    {
+      "id": "GATE_VIP",
+      "type": "vip_gate",
+      "capacity": 2500
+    },
+    {
+      "id": "GS_A",
+      "type": "grandstand",
+      "capacity": 18000
+    },
+    {
+      "id": "GS_B",
+      "type": "grandstand",
+      "capacity": 22000
+    },
+    {
+      "id": "GS_C",
+      "type": "grandstand",
+      "capacity": 16000
+    },
+    {
+      "id": "FAN_ZONE",
+      "type": "fan_zone",
+      "capacity": 12000
+    },
+    {
+      "id": "FOOD_N",
+      "type": "food",
+      "capacity": 3500
+    },
+    {
+      "id": "FOOD_S",
+      "type": "food",
+      "capacity": 3500
+    },
+    {
+      "id": "MERCH",
+      "type": "merchandise",
+      "capacity": 5000
+    },
+    {
+      "id": "PIT_WALK",
+      "type": "attraction",
+      "capacity": 8000
+    },
+    {
+      "id": "MEDICAL",
+      "type": "medical",
+      "capacity": 500
+    },
+    {
+      "id": "EXIT_N",
+      "type": "exit",
+      "capacity": 18000
+    },
+    {
+      "id": "EXIT_E",
+      "type": "exit",
+      "capacity": 15000
+    },
+    {
+      "id": "EXIT_S",
+      "type": "exit",
+      "capacity": 20000
+    },
+    {
+      "id": "METRO",
+      "type": "transport",
+      "capacity": 20000
+    },
+    {
+      "id": "PARKING",
+      "type": "transport",
+      "capacity": 30000
+    }
+  ],
+  "edges": [
+    {
+      "id": "E1",
+      "from": "GATE_A",
+      "to": "FAN_ZONE",
+      "distance_m": 450,
+      "capacity_per_min": 220
+    },
+    {
+      "id": "E2",
+      "from": "GATE_B",
+      "to": "MERCH",
+      "distance_m": 380,
+      "capacity_per_min": 240
+    },
+    {
+      "id": "E3",
+      "from": "GATE_C",
+      "to": "FOOD_S",
+      "distance_m": 420,
+      "capacity_per_min": 220
+    },
+    {
+      "id": "E4",
+      "from": "GATE_VIP",
+      "to": "PIT_WALK",
+      "distance_m": 300,
+      "capacity_per_min": 120
+    },
+    {
+      "id": "E5",
+      "from": "FAN_ZONE",
+      "to": "GS_A",
+      "distance_m": 650,
+      "capacity_per_min": 280
+    },
+    {
+      "id": "E6",
+      "from": "MERCH",
+      "to": "GS_B",
+      "distance_m": 550,
+      "capacity_per_min": 300
+    },
+    {
+      "id": "E7",
+      "from": "FOOD_S",
+      "to": "GS_C",
+      "distance_m": 600,
+      "capacity_per_min": 260
+    },
+    {
+      "id": "E8",
+      "from": "FAN_ZONE",
+      "to": "FOOD_N",
+      "distance_m": 300,
+      "capacity_per_min": 180
+    },
+    {
+      "id": "E9",
+      "from": "FOOD_N",
+      "to": "GS_A",
+      "distance_m": 450,
+      "capacity_per_min": 220
+    },
+    {
+      "id": "E10",
+      "from": "FOOD_S",
+      "to": "GS_C",
+      "distance_m": 350,
+      "capacity_per_min": 200
+    },
+    {
+      "id": "E11",
+      "from": "GS_A",
+      "to": "PIT_WALK",
+      "distance_m": 700,
+      "capacity_per_min": 250
+    },
+    {
+      "id": "E12",
+      "from": "GS_B",
+      "to": "PIT_WALK",
+      "distance_m": 500,
+      "capacity_per_min": 250
+    },
+    {
+      "id": "E13",
+      "from": "GS_C",
+      "to": "FAN_ZONE",
+      "distance_m": 600,
+      "capacity_per_min": 230
+    },
+    {
+      "id": "E14",
+      "from": "PIT_WALK",
+      "to": "EXIT_E",
+      "distance_m": 500,
+      "capacity_per_min": 260
+    },
+    {
+      "id": "E15",
+      "from": "GS_A",
+      "to": "EXIT_N",
+      "distance_m": 700,
+      "capacity_per_min": 300
+    },
+    {
+      "id": "E16",
+      "from": "GS_B",
+      "to": "EXIT_E",
+      "distance_m": 650,
+      "capacity_per_min": 280
+    },
+    {
+      "id": "E17",
+      "from": "GS_C",
+      "to": "EXIT_S",
+      "distance_m": 600,
+      "capacity_per_min": 320
+    },
+    {
+      "id": "E18",
+      "from": "FAN_ZONE",
+      "to": "EXIT_N",
+      "distance_m": 800,
+      "capacity_per_min": 280
+    },
+    {
+      "id": "E19",
+      "from": "FOOD_N",
+      "to": "EXIT_N",
+      "distance_m": 500,
+      "capacity_per_min": 220
+    },
+    {
+      "id": "E20",
+      "from": "FOOD_S",
+      "to": "EXIT_S",
+      "distance_m": 500,
+      "capacity_per_min": 240
+    },
+    {
+      "id": "E21",
+      "from": "EXIT_N",
+      "to": "METRO",
+      "distance_m": 900,
+      "capacity_per_min": 260
+    },
+    {
+      "id": "E22",
+      "from": "EXIT_E",
+      "to": "PARKING",
+      "distance_m": 800,
+      "capacity_per_min": 260
+    },
+    {
+      "id": "E23",
+      "from": "EXIT_S",
+      "to": "PARKING",
+      "distance_m": 700,
+      "capacity_per_min": 280
+    }
+  ],
+  "initial_occupancy": {
+    "GATE_A": 1200,
+    "GATE_B": 1000,
+    "GATE_C": 1400,
+    "GATE_VIP": 250,
+    "GS_A": 2500,
+    "GS_B": 1800,
+    "GS_C": 1600,
+    "FAN_ZONE": 900,
+    "FOOD_N": 350,
+    "FOOD_S": 420,
+    "MERCH": 300,
+    "PIT_WALK": 100
+  },
+  "gate_distribution": {
+    "GATE_A": 0.3,
+    "GATE_B": 0.25,
+    "GATE_C": 0.35,
+    "GATE_VIP": 0.1
+  },
+  "personas": {
+    "hardcore_fan": {
+      "share": 0.35,
+      "speed_mps": 1.45,
+      "patience": 0.85
+    },
+    "family": {
+      "share": 0.2,
+      "speed_mps": 1.0,
+      "patience": 0.55
+    },
+    "tourist": {
+      "share": 0.2,
+      "speed_mps": 1.2,
+      "patience": 0.65
+    },
+    "vip": {
+      "share": 0.1,
+      "speed_mps": 1.35,
+      "patience": 0.9
+    },
+    "photographer": {
+      "share": 0.15,
+      "speed_mps": 1.3,
+      "patience": 0.75
+    }
+  },
+  "destination_probabilities": {
+    "hardcore_fan": {
+      "GS_A": 0.35,
+      "GS_B": 0.3,
+      "GS_C": 0.1,
+      "PIT_WALK": 0.15,
+      "FAN_ZONE": 0.05,
+      "MERCH": 0.05
+    },
+    "family": {
+      "GS_C": 0.3,
+      "FAN_ZONE": 0.25,
+      "FOOD_S": 0.25,
+      "FOOD_N": 0.1,
+      "GS_A": 0.05,
+      "MERCH": 0.05
+    },
+    "tourist": {
+      "FAN_ZONE": 0.3,
+      "MERCH": 0.25,
+      "FOOD_N": 0.2,
+      "GS_A": 0.1,
+      "GS_C": 0.1,
+      "PIT_WALK": 0.05
+    },
+    "vip": {
+      "PIT_WALK": 0.45,
+      "GS_A": 0.35,
+      "FAN_ZONE": 0.1,
+      "MERCH": 0.05,
+      "FOOD_N": 0.05
+    },
+    "photographer": {
+      "GS_A": 0.25,
+      "GS_B": 0.25,
+      "PIT_WALK": 0.25,
+      "FAN_ZONE": 0.15,
+      "MERCH": 0.1
+    }
+  },
+  "event_destination_probabilities": {
+    "PRACTICE": {
+      "GS_A": 0.3,
+      "GS_B": 0.35,
+      "GS_C": 0.25,
+      "FAN_ZONE": 0.1
+    },
+    "LUNCH": {
+      "FOOD_N": 0.35,
+      "FOOD_S": 0.35,
+      "FAN_ZONE": 0.2,
+      "MERCH": 0.1
+    },
+    "PIT_LANE_WALK": {
+      "PIT_WALK": 0.7,
+      "FAN_ZONE": 0.1,
+      "MERCH": 0.1,
+      "GS_A": 0.1
+    },
+    "QUALIFYING": {
+      "GS_A": 0.3,
+      "GS_B": 0.35,
+      "GS_C": 0.25,
+      "FAN_ZONE": 0.1
+    },
+    "RACE": {
+      "GS_A": 0.3,
+      "GS_B": 0.35,
+      "GS_C": 0.3,
+      "FAN_ZONE": 0.05
+    },
+    "PODIUM": {
+      "FAN_ZONE": 0.6,
+      "GS_A": 0.15,
+      "GS_B": 0.1,
+      "GS_C": 0.1,
+      "PIT_WALK": 0.05
+    },
+    "EXIT_RUSH": {
+      "EXIT_N": 0.3,
+      "EXIT_E": 0.3,
+      "EXIT_S": 0.4
+    }
+  },
+  "queue_service": {
+    "FOOD_N": {
+      "service_rate_per_min": 150,
+      "queue_capacity": 1000
+    },
+    "FOOD_S": {
+      "service_rate_per_min": 145,
+      "queue_capacity": 1000
+    },
+    "MERCH": {
+      "service_rate_per_min": 100,
+      "queue_capacity": 1500
+    },
+    "PIT_WALK": {
+      "service_rate_per_min": 300,
+      "queue_capacity": 2500
+    }
+  },
+  "schedule": [
+    [
+      "08:00",
+      "ENTRY"
+    ],
+    [
+      "11:00",
+      "PRACTICE"
+    ],
+    [
+      "12:00",
+      "LUNCH"
+    ],
+    [
+      "13:30",
+      "PIT_LANE_WALK"
+    ],
+    [
+      "15:00",
+      "QUALIFYING"
+    ],
+    [
+      "17:00",
+      "RACE"
+    ],
+    [
+      "19:00",
+      "PODIUM"
+    ],
+    [
+      "19:30",
+      "EXIT_RUSH"
+    ]
+  ],
+  "weather": [
+    [
+      "08:00",
+      "sunny",
+      0.1
+    ],
+    [
+      "14:00",
+      "cloudy",
+      0.25
+    ],
+    [
+      "16:30",
+      "rain",
+      0.75
+    ],
+    [
+      "17:00",
+      "heavy_rain",
+      0.9
+    ],
+    [
+      "18:00",
+      "rain",
+      0.65
+    ]
+  ],
+  "incidents": [
+    {
+      "time": "16:30",
+      "type": "weather_change",
+      "value": "heavy_rain"
+    },
+    {
+      "time": "17:20",
+      "type": "route_closure",
+      "edge_id": "E16"
+    },
+    {
+      "time": "18:10",
+      "type": "medical_incident",
+      "node_id": "GS_B",
+      "duration_min": 10
+    }
+  ],
+  "simulation_population": 2000,
+  "attendance_scale_factor": 60
+}
