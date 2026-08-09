@@ -3,6 +3,8 @@ import { DestinationSelector } from './DestinationSelector.js';
 import { SeededRNG } from '../utils/random.js';
 import { AgentStatus } from '../models/Agent.js';
 import { AStarRouter } from '../graph/AStarRouter.js';
+import { QueueEngine } from '../queue/QueueEngine.js';
+import { RiskEngine } from '../risk/RiskEngine.js';
 
 export class SimulationEngine {
   constructor(storage, initialTimeStr = '16:20') {
@@ -22,6 +24,9 @@ export class SimulationEngine {
       this.metadata.weather
     );
     this.destinationSelector = new DestinationSelector(this.metadata, this.rng);
+
+    this.queueEngine = new QueueEngine(this.metadata.queueService || {});
+    this.riskEngine = new RiskEngine();
 
     this.activeEvent = this.scheduleManager.getActiveEvent(this.currentSeconds);
     this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
@@ -49,6 +54,7 @@ export class SimulationEngine {
     this.currentSeconds = timeToSeconds(this.initialTimeStr);
     this.tickCount = 0;
     this.rng = new SeededRNG(42);
+    this.queueEngine = new QueueEngine(this.metadata.queueService || {});
 
     const graph = this.storage.getVenueGraphSync();
     if (graph) {
@@ -137,6 +143,11 @@ export class SimulationEngine {
 
               const newNode = graph.getNode(agent.currentNode);
               if (newNode) newNode.addOccupancy(1);
+
+              // If agent arrived at a queue facility at destination, enqueue
+              if (agent.status === AgentStatus.ARRIVED && this.queueEngine.isQueueFacility(agent.currentNode)) {
+                this.queueEngine.enqueue(agent.currentNode, agent);
+              }
             }
           } else {
             // Edge blocked or non-traversable, force instant route recalculation
@@ -153,12 +164,32 @@ export class SimulationEngine {
       edge.currentFlowRate = Math.round((count / this.tickSeconds) * 60);
     }
 
+    // Process facility queue service tick
+    this.queueEngine.processTick(this.tickSeconds, graph);
+
     return this.getState();
   }
 
   getState() {
     const graph = this.storage.getVenueGraphSync();
     const simTime = secondsToTime(this.currentSeconds);
+
+    const risks = graph ? this.riskEngine.calculateAllRisks(graph, this.queueEngine, this.activeWeather) : new Map();
+
+    const nodesJson = graph ? graph.getNodes().map(n => {
+      const nodeObj = n.toJSON();
+      const risk = risks.get(n.id);
+      const queueLen = this.queueEngine.getQueueLength(n.id);
+      const waitTimeMin = this.queueEngine.getWaitTimeMinutes(n.id);
+      return {
+        ...nodeObj,
+        riskScore: risk ? risk.riskScore : 0,
+        riskSeverity: risk ? risk.severity : 'SAFE',
+        riskBreakdown: risk ? risk.breakdown : null,
+        queueLength: queueLen,
+        queueWaitTimeMin: waitTimeMin
+      };
+    }) : [];
 
     return {
       simulationId: 'sim_default',
@@ -167,8 +198,9 @@ export class SimulationEngine {
       isRunning: this.isRunning,
       activeEvent: this.activeEvent,
       weather: this.activeWeather,
-      nodes: graph ? graph.getNodes().map(n => n.toJSON()) : [],
+      nodes: nodesJson,
       edges: graph ? graph.getEdges().map(e => e.toJSON()) : [],
+      queues: this.queueEngine.toJSON(),
       agentCount: this.storage.agentsMap.size
     };
   }
