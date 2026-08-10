@@ -3,14 +3,14 @@ import { config } from '../config/env.js';
 import { DeterministicFallbackEngine } from './DeterministicFallbackEngine.js';
 
 /**
- * HuggingFaceAdapter formats prompts and calls HF inference API with resilient fallback protection.
+ * HuggingFaceAdapter formats prompts and calls HF Serverless Router API with resilient fallback protection.
  */
 export class HuggingFaceAdapter {
   constructor(token = config.hfToken, model = config.hfModel) {
     this.token = token;
-    this.model = model;
+    this.model = model || 'Qwen/Qwen2.5-Coder-32B-Instruct';
     this.fallbackEngine = new DeterministicFallbackEngine();
-    this.timeoutMs = 5000;
+    this.timeoutMs = 8000;
   }
 
   async generateRecommendation(candidateAction) {
@@ -22,10 +22,10 @@ export class HuggingFaceAdapter {
       }, 'No candidate action provided');
     }
 
-    if (!this.token || this.token.trim() === '') {
+    if (!this.token || this.token.trim() === '' || this.token.includes('YOUR_HF_TOKEN') || this.token.includes('hf_xxx')) {
       return this.fallbackEngine.generateFallbackRecommendation(
         candidateAction,
-        'HF_TOKEN environment variable is not configured.'
+        'HF_TOKEN is missing or not configured in backend/.env'
       );
     }
 
@@ -50,20 +50,21 @@ Respond strictly in JSON format: {"title": "short title", "reasoning": "two sent
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      // Try HF OpenAI-compatible Router endpoint first, then SDK fallback
       let responseText = null;
+      let lastError = null;
 
+      // Primary Endpoint: Hugging Face Serverless Auto Router API
       try {
-        const routerRes = await fetch('https://router.huggingface.co/hf-inference/v1/chat/completions', {
+        const routerRes = await fetch('https://router.huggingface.co/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${this.token}`,
+            'Authorization': `Bearer ${this.token.trim()}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             model: this.model,
             messages: [{ role: 'user', content: systemPrompt }],
-            max_tokens: 150,
+            max_tokens: 200,
             temperature: 0.3
           }),
           signal: controller.signal
@@ -72,43 +73,56 @@ Respond strictly in JSON format: {"title": "short title", "reasoning": "two sent
         if (routerRes.ok) {
           const routerData = await routerRes.json();
           responseText = routerData?.choices?.[0]?.message?.content || null;
+        } else {
+          const errBody = await routerRes.text().catch(() => '');
+          lastError = `HF Router API returned ${routerRes.status}: ${errBody || routerRes.statusText}`;
         }
       } catch (routerErr) {
-        // Router endpoint fallback to standard SDK
+        lastError = routerErr.message;
       }
 
+      // SDK Fallback Endpoint if router fails
       if (!responseText) {
-        const hf = new HfInference(this.token);
-        const sdkRes = await hf.textGeneration({
-          model: this.model,
-          inputs: systemPrompt,
-          parameters: { max_new_tokens: 150, temperature: 0.3, return_full_text: false }
-        }, { signal: controller.signal });
+        try {
+          const hf = new HfInference(this.token.trim());
+          const sdkRes = await hf.textGeneration({
+            model: this.model,
+            inputs: systemPrompt,
+            parameters: { max_new_tokens: 150, temperature: 0.3, return_full_text: false }
+          }, { signal: controller.signal });
 
-        responseText = sdkRes?.generated_text?.trim() || null;
+          responseText = sdkRes?.generated_text?.trim() || null;
+        } catch (sdkErr) {
+          if (!lastError) lastError = sdkErr.message;
+        }
       }
 
       clearTimeout(timeoutId);
 
       if (responseText) {
+        // Attempt JSON parsing from LLM output
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.reasoning) {
-            return {
-              id: `rec_${Date.now()}`,
-              timestamp: facts.simTime || new Date().toISOString(),
-              actionType: candidateAction.actionType,
-              targetNode: candidateAction.targetNode,
-              priority: candidateAction.priority,
-              title: parsed.title || candidateAction.title,
-              reasoning: parsed.reasoning,
-              isFallback: false
-            };
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.reasoning) {
+              return {
+                id: `rec_${Date.now()}`,
+                timestamp: facts.simTime || new Date().toISOString(),
+                actionType: candidateAction.actionType,
+                targetNode: candidateAction.targetNode,
+                priority: candidateAction.priority,
+                title: parsed.title || candidateAction.title,
+                reasoning: parsed.reasoning,
+                isFallback: false
+              };
+            }
+          } catch (e) {
+            // Continuation fallback
           }
         }
 
-        // If text was generated but not JSON format, use string clean
+        // If LLM returned raw explanation text without JSON wrapper
         if (responseText.length > 10) {
           return {
             id: `rec_${Date.now()}`,
@@ -123,7 +137,7 @@ Respond strictly in JSON format: {"title": "short title", "reasoning": "two sent
         }
       }
 
-      throw new Error('HF output could not be retrieved or parsed');
+      throw new Error(lastError || 'HF output could not be retrieved or parsed');
 
     } catch (err) {
       clearTimeout(timeoutId);
