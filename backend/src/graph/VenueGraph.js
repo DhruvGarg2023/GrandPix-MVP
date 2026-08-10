@@ -76,9 +76,26 @@ export class VenueGraph {
     return this.reverseAdjacencyMap.get(nodeId) || [];
   }
 
+  getNeighbors(nodeId) {
+    const neighbors = [];
+    const outgoing = this.adjacencyMap.get(nodeId) || [];
+    for (const edge of outgoing) {
+      neighbors.push({ edge, targetNodeId: edge.to });
+    }
+    const incoming = this.reverseAdjacencyMap.get(nodeId) || [];
+    for (const edge of incoming) {
+      neighbors.push({ edge, targetNodeId: edge.from });
+    }
+    return neighbors;
+  }
+
   getEdgeBetween(fromNodeId, toNodeId) {
     const outgoing = this.getOutgoingEdges(fromNodeId);
-    return outgoing.find(e => e.to === toNodeId) || null;
+    const match = outgoing.find(e => e.to === toNodeId);
+    if (match) return match;
+
+    const incoming = this.getIncomingEdges(fromNodeId);
+    return incoming.find(e => e.from === toNodeId) || null;
   }
 
   blockEdge(edgeId) {

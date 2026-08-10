@@ -133,12 +133,11 @@ export class AStarRouter {
       visited.add(currentId);
 
       const currentG = gScore.get(currentId) ?? Infinity;
-      const outgoingEdges = graph.getOutgoingEdges(currentId);
+      const neighbors = graph.getNeighbors ? graph.getNeighbors(currentId) : graph.getOutgoingEdges(currentId).map(e => ({ edge: e, targetNodeId: e.to }));
 
-      for (const edge of outgoingEdges) {
+      for (const { edge, targetNodeId: neighborId } of neighbors) {
         if (edge.isBlocked) continue;
 
-        const neighborId = edge.to;
         const neighborNode = graph.getNode(neighborId);
         
         const edgeCost = this.calculateEdgeCost(edge, neighborNode);
