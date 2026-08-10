@@ -9,6 +9,7 @@ import { SimulationController } from './controllers/simulationController.js';
 import { IncidentController } from './controllers/incidentController.js';
 import { SpectatorController } from './controllers/spectatorController.js';
 import { AIController } from './controllers/aiController.js';
+import { WhatIfController } from './controllers/whatIfController.js';
 
 export function createApp() {
   const app = express();
@@ -41,6 +42,7 @@ export function createApp() {
   const incidentController = new IncidentController(simEngine, storage);
   const spectatorController = new SpectatorController(simEngine, storage);
   const aiController = new AIController(simEngine, predictionAdapter);
+  const whatIfController = new WhatIfController(simEngine, storage);
 
   // Health Endpoint
   app.get('/health', async (req, res) => {
@@ -84,11 +86,14 @@ export function createApp() {
   // 3. Incidents
   app.post('/api/simulations/:id/incidents', incidentController.triggerIncident);
 
-  // 4. Spectator Endpoints
+  // 4. Sandbox What-If Scenarios
+  app.post('/api/simulations/:id/scenarios', whatIfController.runWhatIfScenario);
+
+  // 5. Spectator Endpoints
   app.get('/api/spectator/state', spectatorController.getSpectatorState);
   app.get('/api/spectator/routes', spectatorController.getSpectatorRoute);
 
-  // 5. AI Copilot Recommendation
+  // 6. AI Copilot Recommendation
   app.post('/api/ai/copilot', aiController.getCopilotRecommendation);
 
   // Global Error Handler

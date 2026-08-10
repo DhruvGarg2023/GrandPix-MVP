@@ -24,6 +24,11 @@ export class AIController {
       const predictionsMap = await this.predictionAdapter.predictBatch(featureItems);
       const { recommendation, candidateActions } = await this.recService.getRecommendation(state, null, predictionsMap);
 
+      const gateway = req.app?.get('socketGateway');
+      if (gateway && recommendation) {
+        gateway.broadcastRecommendation(recommendation);
+      }
+
       res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),

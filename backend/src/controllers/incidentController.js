@@ -1,7 +1,12 @@
 export class IncidentController {
-  constructor(simEngine, storage) {
+  constructor(simEngine, storage, socketGateway = null) {
     this.simEngine = simEngine;
     this.storage = storage;
+    this.socketGateway = socketGateway;
+  }
+
+  _getSocketGateway(req) {
+    return this.socketGateway || req.app?.get('socketGateway') || null;
   }
 
   triggerIncident = async (req, res) => {
@@ -17,6 +22,7 @@ export class IncidentController {
     }
 
     const graph = this.storage.getVenueGraphSync();
+    const gateway = this._getSocketGateway(req);
 
     if (type === 'route_closure') {
       if (!edge_id || typeof edge_id !== 'string') {
@@ -29,14 +35,22 @@ export class IncidentController {
 
       graph.blockEdge(edge_id);
 
+      const incidentPayload = {
+        type,
+        edge_id,
+        isBlocked: true,
+        timestamp: new Date().toISOString()
+      };
+
+      if (gateway) {
+        gateway.broadcastIncident(incidentPayload);
+        // Also broadcast tick state update to refresh all clients
+        gateway.broadcastTick(this.simEngine.getState());
+      }
+
       return res.status(201).json({
         status: 'ok',
-        incident: {
-          type,
-          edge_id,
-          isBlocked: true,
-          timestamp: new Date().toISOString()
-        },
+        incident: incidentPayload,
         message: `Edge '${edge_id}' successfully blocked. Affected agents rerouted.`
       });
     }
@@ -57,14 +71,21 @@ export class IncidentController {
         speedMultiplier: value === 'heavy_rain' ? 0.70 : value === 'rain' ? 0.85 : value === 'cloudy' ? 0.95 : 1.0
       };
 
+      const incidentPayload = {
+        type,
+        value,
+        weather: this.simEngine.activeWeather,
+        timestamp: new Date().toISOString()
+      };
+
+      if (gateway) {
+        gateway.broadcastIncident(incidentPayload);
+        gateway.broadcastTick(this.simEngine.getState());
+      }
+
       return res.status(201).json({
         status: 'ok',
-        incident: {
-          type,
-          value,
-          weather: this.simEngine.activeWeather,
-          timestamp: new Date().toISOString()
-        },
+        incident: incidentPayload,
         message: `Weather condition successfully changed to '${value}'.`
       });
     }
@@ -78,14 +99,20 @@ export class IncidentController {
         return res.status(404).json({ error: 'Not Found', message: `Node '${node_id}' not found in venue graph.` });
       }
 
+      const incidentPayload = {
+        type,
+        node_id,
+        duration_min: duration_min || 10,
+        timestamp: new Date().toISOString()
+      };
+
+      if (gateway) {
+        gateway.broadcastIncident(incidentPayload);
+      }
+
       return res.status(201).json({
         status: 'ok',
-        incident: {
-          type,
-          node_id,
-          duration_min: duration_min || 10,
-          timestamp: new Date().toISOString()
-        },
+        incident: incidentPayload,
         message: `Medical incident logged at '${node_id}'. Emergency response corridor reserved.`
       });
     }
