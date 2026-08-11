@@ -1,8 +1,12 @@
 /**
  * ScheduleWeatherManager tracks time progression, active F1 schedule event, and weather condition.
+ * Robustly parses both array tuple format [time, event] and object schema format { time, event }.
  */
 export function timeToSeconds(timeStr) {
-  const [hrs, mins] = timeStr.split(':').map(n => parseInt(n, 10));
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const parts = timeStr.split(':');
+  const hrs = parseInt(parts[0] || '0', 10);
+  const mins = parseInt(parts[1] || '0', 10);
   return hrs * 3600 + mins * 60;
 }
 
@@ -15,18 +19,30 @@ export function secondsToTime(totalSeconds) {
 
 export class ScheduleWeatherManager {
   constructor(schedule, weatherSchedule) {
-    this.schedule = (schedule || []).map(([time, event]) => ({
-      time,
-      seconds: timeToSeconds(time),
-      event
-    })).sort((a, b) => a.seconds - b.seconds);
+    this.schedule = (schedule || []).map(item => {
+      if (Array.isArray(item)) {
+        const [time, event] = item;
+        return { time, seconds: timeToSeconds(time), event };
+      } else if (typeof item === 'object' && item !== null) {
+        const time = item.time;
+        const event = (item.event || item.name || 'ENTRY').toUpperCase();
+        return { time, seconds: timeToSeconds(time), event, demandMultiplier: item.demand_multiplier || 1.0 };
+      }
+      return null;
+    }).filter(Boolean).sort((a, b) => a.seconds - b.seconds);
 
-    this.weatherSchedule = (weatherSchedule || []).map(([time, condition, intensity]) => ({
-      time,
-      seconds: timeToSeconds(time),
-      condition,
-      intensity
-    })).sort((a, b) => a.seconds - b.seconds);
+    this.weatherSchedule = (weatherSchedule || []).map(item => {
+      if (Array.isArray(item)) {
+        const [time, condition, intensity] = item;
+        return { time, seconds: timeToSeconds(time), condition, intensity: intensity || 0.1 };
+      } else if (typeof item === 'object' && item !== null) {
+        const time = item.time;
+        const condition = item.condition || 'sunny';
+        const intensity = item.rain_probability !== undefined ? item.rain_probability : (item.intensity || 0.1);
+        return { time, seconds: timeToSeconds(time), condition, intensity };
+      }
+      return null;
+    }).filter(Boolean).sort((a, b) => a.seconds - b.seconds);
   }
 
   getActiveEvent(simSeconds) {
@@ -60,8 +76,11 @@ export class ScheduleWeatherManager {
     let speedMultiplier = 1.0;
     switch (active.condition) {
       case 'cloudy':
+      case 'partly_cloudy':
+      case 'overcast':
         speedMultiplier = 0.95;
         break;
+      case 'light_rain':
       case 'rain':
         speedMultiplier = 0.85;
         break;
@@ -69,6 +88,7 @@ export class ScheduleWeatherManager {
         speedMultiplier = 0.70;
         break;
       case 'sunny':
+      case 'clear':
       default:
         speedMultiplier = 1.0;
         break;

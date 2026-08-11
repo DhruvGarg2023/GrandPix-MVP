@@ -49,6 +49,19 @@ export class SimulationController {
     }
   };
 
+  advanceTick = async (req, res) => {
+    try {
+      const ticksCount = Math.max(1, parseInt(req.body?.ticks || 1, 10));
+      let lastState = null;
+      for (let i = 0; i < ticksCount; i++) {
+        lastState = this.simEngine.tick();
+      }
+      res.json({ status: 'ok', message: `Advanced simulation by ${ticksCount} tick(s)`, state: lastState });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to advance simulation tick', message: err.message });
+    }
+  };
+
   getSimulationState = async (req, res) => {
     try {
       const state = this.simEngine.getState();

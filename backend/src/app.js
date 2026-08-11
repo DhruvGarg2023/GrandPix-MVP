@@ -1,71 +1,49 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from './config/env.js';
-import { InMemoryStorage } from './storage/InMemoryStorage.js';
 import { DataLoader } from './loader/DataLoader.js';
+import { InMemoryStorage } from './storage/InMemoryStorage.js';
 import { SimulationEngine } from './engine/SimulationEngine.js';
 import { PythonPredictionAdapter } from './prediction/PythonPredictionAdapter.js';
 import { SimulationController } from './controllers/simulationController.js';
 import { IncidentController } from './controllers/incidentController.js';
+import { WhatIfController } from './controllers/whatIfController.js';
 import { SpectatorController } from './controllers/spectatorController.js';
 import { AIController } from './controllers/aiController.js';
-import { WhatIfController } from './controllers/whatIfController.js';
 
-export function createApp() {
+export function createApp(dataPath = '../data') {
   const app = express();
 
   // Middleware
-  app.use(cors({ origin: config.frontendUrl }));
+  app.use(cors());
   app.use(express.json());
 
-  // Storage & Data Loading Initialization
+  // Instantiate Storage & Load Dataset
   const storage = new InMemoryStorage();
-  const dataLoader = new DataLoader(config.dataPath);
-  
-  let datasetStats = null;
-  let datasetError = null;
+  const loader = new DataLoader(dataPath);
+  const dataStats = loader.loadAndHydrate(storage);
 
-  try {
-    datasetStats = dataLoader.loadAndHydrate(storage);
-    console.log('[DataLoader] Dataset loaded successfully:', datasetStats);
-  } catch (err) {
-    datasetError = err.message;
-    console.error('[DataLoader] Dataset load error:', err);
-  }
-
-  // Domain Engines & Adapters
-  const simEngine = new SimulationEngine(storage, '16:20');
+  // Instantiate Simulation Engine & AI Adapters
+  const simEngine = new SimulationEngine(storage);
   const predictionAdapter = new PythonPredictionAdapter();
 
-  // Controllers
+  // Instantiate REST Controllers
   const simController = new SimulationController(simEngine, predictionAdapter);
   const incidentController = new IncidentController(simEngine, storage);
+  const whatIfController = new WhatIfController(simEngine, storage);
   const spectatorController = new SpectatorController(simEngine, storage);
   const aiController = new AIController(simEngine, predictionAdapter);
-  const whatIfController = new WhatIfController(simEngine, storage);
 
   // Health Endpoint
-  app.get('/health', async (req, res) => {
-    if (datasetError) {
-      return res.status(500).json({
-        status: 'error',
-        message: 'Dataset failed to load',
-        error: datasetError
-      });
-    }
-
-    const nodes = await storage.getNodes();
-    const edges = await storage.getEdges();
-    const agents = await storage.getAgents();
-
+  app.get('/health', (req, res) => {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       datasetLoaded: true,
-      nodesCount: nodes.length,
-      edgesCount: edges.length,
-      agentsCount: agents.length,
-      scenario: datasetStats?.scenario || null
+      nodesCount: dataStats.nodesCount,
+      edgesCount: dataStats.edgesCount,
+      agentsCount: dataStats.agentsCount,
+      scenario: dataStats.scenario,
+      circuit: dataStats.scenario.circuit
     });
   });
 
@@ -77,6 +55,7 @@ export function createApp() {
   app.post('/api/simulations/:id/pause', simController.pauseSimulation);
   app.post('/api/simulations/:id/resume', simController.resumeSimulation);
   app.post('/api/simulations/:id/reset', simController.resetSimulation);
+  app.post('/api/simulations/:id/tick', simController.advanceTick);
   app.get('/api/simulations/:id/state', simController.getSimulationState);
 
   // 2. Predictions & Risks
@@ -107,6 +86,6 @@ export function createApp() {
     storage,
     simEngine,
     predictionAdapter,
-    datasetStats
+    dataStats
   };
 }

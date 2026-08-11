@@ -27,14 +27,14 @@ describe('Backend Milestone 3 - Simulation Engine & Clock Tests', () => {
 
     const manager = new ScheduleWeatherManager(masterData.schedule, masterData.weather);
 
-    assert.equal(manager.getActiveEvent(timeToSeconds('08:00')), 'ENTRY');
+    assert.equal(manager.getActiveEvent(timeToSeconds('08:00')), 'ENTRY_RUSH');
     assert.equal(manager.getActiveEvent(timeToSeconds('11:00')), 'PRACTICE');
-    assert.equal(manager.getActiveEvent(timeToSeconds('12:00')), 'LUNCH');
+    assert.equal(manager.getActiveEvent(timeToSeconds('13:00')), 'LUNCH');
     assert.equal(manager.getActiveEvent(timeToSeconds('17:00')), 'RACE');
     assert.equal(manager.getActiveEvent(timeToSeconds('19:30')), 'EXIT_RUSH');
 
-    assert.equal(manager.getWeatherAt(timeToSeconds('08:00')).condition, 'sunny');
-    assert.equal(manager.getWeatherAt(timeToSeconds('16:30')).condition, 'rain');
+    assert.equal(manager.getWeatherAt(timeToSeconds('08:00')).condition, 'clear');
+    assert.equal(manager.getWeatherAt(timeToSeconds('16:30')).condition, 'light_rain');
 
     const heavyRain = manager.getWeatherAt(timeToSeconds('17:00'));
     assert.equal(heavyRain.condition, 'heavy_rain');
@@ -111,8 +111,8 @@ describe('Backend Milestone 3 - Simulation Engine & Clock Tests', () => {
     assert.equal(state.tick, 60);
     assert.equal(state.simTime, '16:30');
 
-    // Verify weather transition at 16:30 to rain
-    assert.equal(state.weather.condition, 'rain');
+    // Verify weather transition at 16:30 to light_rain
+    assert.equal(state.weather.condition, 'light_rain');
 
     // Verify agents have moved and occupancies exist across nodes
     const nodeOccupancies = state.nodes.reduce((acc, n) => acc + n.currentOccupancy, 0);

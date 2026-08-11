@@ -411,82 +411,126 @@
     }
   },
   "schedule": [
-    [
-      "08:00",
-      "ENTRY"
-    ],
-    [
-      "11:00",
-      "PRACTICE"
-    ],
-    [
-      "12:00",
-      "LUNCH"
-    ],
-    [
-      "13:30",
-      "PIT_LANE_WALK"
-    ],
-    [
-      "15:00",
-      "QUALIFYING"
-    ],
-    [
-      "17:00",
-      "RACE"
-    ],
-    [
-      "19:00",
-      "PODIUM"
-    ],
-    [
-      "19:30",
-      "EXIT_RUSH"
-    ]
+    {
+      "time": "08:00",
+      "event": "entry_rush",
+      "demand_multiplier": 1.8
+    },
+    {
+      "time": "11:00",
+      "event": "practice",
+      "demand_multiplier": 1.25
+    },
+    {
+      "time": "13:00",
+      "event": "lunch",
+      "demand_multiplier": 1.55
+    },
+    {
+      "time": "14:00",
+      "event": "pit_lane_walk",
+      "demand_multiplier": 1.4
+    },
+    {
+      "time": "15:00",
+      "event": "qualifying",
+      "demand_multiplier": 1.3
+    },
+    {
+      "time": "17:00",
+      "event": "race",
+      "demand_multiplier": 1.5
+    },
+    {
+      "time": "19:00",
+      "event": "podium",
+      "demand_multiplier": 1.25
+    },
+    {
+      "time": "19:30",
+      "event": "exit_rush",
+      "demand_multiplier": 2.4
+    }
   ],
   "weather": [
-    [
-      "08:00",
-      "sunny",
-      0.1
-    ],
-    [
-      "14:00",
-      "cloudy",
-      0.25
-    ],
-    [
-      "16:30",
-      "rain",
-      0.75
-    ],
-    [
-      "17:00",
-      "heavy_rain",
-      0.9
-    ],
-    [
-      "18:00",
-      "rain",
-      0.65
-    ]
+    {
+      "time": "08:00",
+      "condition": "clear",
+      "temperature_c": 26,
+      "rain_probability": 0.05
+    },
+    {
+      "time": "12:00",
+      "condition": "partly_cloudy",
+      "temperature_c": 29,
+      "rain_probability": 0.2
+    },
+    {
+      "time": "15:30",
+      "condition": "overcast",
+      "temperature_c": 27,
+      "rain_probability": 0.45
+    },
+    {
+      "time": "16:30",
+      "condition": "light_rain",
+      "temperature_c": 25,
+      "rain_probability": 0.7
+    },
+    {
+      "time": "17:00",
+      "condition": "heavy_rain",
+      "temperature_c": 24,
+      "rain_probability": 0.9
+    },
+    {
+      "time": "18:00",
+      "condition": "rain",
+      "temperature_c": 24,
+      "rain_probability": 0.75
+    },
+    {
+      "time": "19:30",
+      "condition": "cloudy",
+      "temperature_c": 23,
+      "rain_probability": 0.3
+    }
   ],
   "incidents": [
     {
-      "time": "16:30",
-      "type": "weather_change",
-      "value": "heavy_rain"
+      "time": "10:40",
+      "type": "route_closure",
+      "edge_id": "E5",
+      "severity": "medium",
+      "duration_min": 25
+    },
+    {
+      "time": "14:20",
+      "type": "medical_emergency",
+      "node_id": "FOOD_S",
+      "severity": "high",
+      "duration_min": 12
+    },
+    {
+      "time": "16:45",
+      "type": "route_closure",
+      "edge_id": "E10",
+      "severity": "high",
+      "duration_min": 35
     },
     {
       "time": "17:20",
-      "type": "route_closure",
-      "edge_id": "E16"
+      "type": "weather_alert",
+      "node_id": "FAN_ZONE",
+      "severity": "medium",
+      "duration_min": 60
     },
     {
-      "time": "18:10",
-      "type": "medical_incident",
-      "node_id": "GS_B",
-      "duration_min": 10
+      "time": "19:35",
+      "type": "transport_delay",
+      "node_id": "METRO",
+      "severity": "high",
+      "duration_min": 20
     }
   ],
   "simulation_population": 2000,
