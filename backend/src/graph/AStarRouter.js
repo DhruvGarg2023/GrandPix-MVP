@@ -72,7 +72,7 @@ export class AStarRouter {
    * Cost = distance_m * (1.0 + congestionWeight * (occupancy / capacity)^2)
    */
   calculateEdgeCost(edge, targetNode) {
-    if (!edge || edge.isBlocked) {
+    if (!edge || edge.isBlocked || (targetNode && targetNode.isDisabled)) {
       return Infinity;
     }
 

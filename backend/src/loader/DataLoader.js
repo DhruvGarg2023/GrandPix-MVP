@@ -194,4 +194,133 @@ export class DataLoader {
       scenario: masterData.scenario
     };
   }
+
+  parseAgentsCSV(csvText) {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length <= 1) {
+      throw new Error('Agents CSV is empty or missing header');
+    }
+
+    const header = lines[0].split(',').map(h => h.trim());
+    const expectedHeaders = ['agent_id', 'persona', 'entry_gate', 'initial_destination', 'speed_mps', 'patience', 'group_size'];
+    for (const h of expectedHeaders) {
+      if (!header.includes(h)) {
+        throw new Error(`Missing expected CSV header '${h}' in agents CSV`);
+      }
+    }
+
+    const idIdx = header.indexOf('agent_id');
+    const personaIdx = header.indexOf('persona');
+    const gateIdx = header.indexOf('entry_gate');
+    const destIdx = header.indexOf('initial_destination');
+    const speedIdx = header.indexOf('speed_mps');
+    const patienceIdx = header.indexOf('patience');
+    const groupIdx = header.indexOf('group_size');
+
+    const agents = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const cols = line.split(',').map(c => c.trim());
+      
+      agents.push({
+        id: cols[idIdx],
+        persona: cols[personaIdx],
+        entryGate: cols[gateIdx],
+        initialDestination: cols[destIdx],
+        speedMps: parseFloat(cols[speedIdx]) || 1.2,
+        patience: parseFloat(cols[patienceIdx]) || 600,
+        groupSize: parseInt(cols[groupIdx], 10) || 1
+      });
+    }
+    return agents;
+  }
+
+  parseScheduleCSV(csvText) {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length <= 1) {
+      throw new Error('Schedule CSV is empty or missing header');
+    }
+
+    const header = lines[0].split(',').map(h => h.trim());
+    const expectedHeaders = ['time', 'event', 'demand_multiplier'];
+    for (const h of expectedHeaders) {
+      if (!header.includes(h)) {
+        throw new Error(`Missing expected CSV header '${h}' in schedule CSV`);
+      }
+    }
+
+    const timeIdx = header.indexOf('time');
+    const eventIdx = header.indexOf('event');
+    const multiplierIdx = header.indexOf('demand_multiplier');
+
+    const schedule = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const cols = line.split(',').map(c => c.trim());
+      
+      schedule.push({
+        time: cols[timeIdx],
+        event: cols[eventIdx],
+        demand_multiplier: parseFloat(cols[multiplierIdx]) || 1.0
+      });
+    }
+    return schedule;
+  }
+
+  loadCustomAndHydrate(storage, graphJson, agentsCsvText, scheduleCsvText) {
+    let agentsData = [];
+    if (agentsCsvText) {
+      agentsData = this.parseAgentsCSV(agentsCsvText);
+    } else {
+      agentsData = this.loadCrowdAgentsCSV();
+    }
+
+    if (scheduleCsvText) {
+      const scheduleData = this.parseScheduleCSV(scheduleCsvText);
+      graphJson.schedule = scheduleData;
+    }
+
+    this.validateDataset(graphJson, agentsData);
+
+    const graph = VenueGraph.fromMasterInput(graphJson);
+    if (graphJson.initial_occupancy) {
+      for (const [nodeId, count] of Object.entries(graphJson.initial_occupancy)) {
+        const node = graph.getNode(nodeId);
+        if (node) {
+          node.setOccupancy(count);
+        }
+      }
+    }
+    storage.setVenueGraph(graph);
+
+    const agentModels = agentsData.map(data => new Agent(data));
+    storage.setAgents(agentModels);
+
+    const metadata = {
+      version: graphJson.version || "1.0",
+      scenario: graphJson.scenario || { circuit: "Custom Circuit", attendance: agentModels.length },
+      initialOccupancy: graphJson.initial_occupancy,
+      gateDistribution: graphJson.gate_distribution,
+      personas: graphJson.personas,
+      destinationProbabilities: graphJson.destination_probabilities,
+      eventDestinationProbabilities: graphJson.event_destination_probabilities,
+      queueService: graphJson.queue_service,
+      schedule: graphJson.schedule,
+      weather: graphJson.weather || { condition: "sunny", intensity: 0.1 },
+      incidents: graphJson.incidents || [],
+      simulationPopulation: graphJson.simulation_population,
+      attendanceScaleFactor: graphJson.attendance_scale_factor
+    };
+
+    storage.setMetadata(metadata);
+
+    return {
+      nodesCount: graphJson.nodes.length,
+      edgesCount: graphJson.edges.length,
+      agentsCount: agentModels.length,
+      scenario: metadata.scenario
+    };
+  }
 }

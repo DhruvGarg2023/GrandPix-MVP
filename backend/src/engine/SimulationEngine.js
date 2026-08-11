@@ -5,6 +5,7 @@ import { AgentStatus } from '../models/Agent.js';
 import { AStarRouter } from '../graph/AStarRouter.js';
 import { QueueEngine } from '../queue/QueueEngine.js';
 import { RiskEngine } from '../risk/RiskEngine.js';
+import { DataLoader } from '../loader/DataLoader.js';
 
 export class SimulationEngine {
   constructor(storage, initialTimeStr = '16:20') {
@@ -14,19 +15,23 @@ export class SimulationEngine {
     this.tickCount = 0;
     this.tickSeconds = 10;
     this.isRunning = false;
+    this.speedMultiplier = 1;
+    this.timerId = null;
+    this.socketGateway = null;
 
     this.rng = new SeededRNG(42);
     this.router = new AStarRouter({ congestionWeight: 3.0 });
     
     this.metadata = storage.metadata || {};
     this.scheduleManager = new ScheduleWeatherManager(
-      this.metadata.schedule,
-      this.metadata.weather
+      Array.isArray(this.metadata.schedule) ? this.metadata.schedule : [],
+      Array.isArray(this.metadata.weather) ? this.metadata.weather : []
     );
     this.destinationSelector = new DestinationSelector(this.metadata, this.rng);
 
     this.queueEngine = new QueueEngine(this.metadata.queueService || {});
     this.riskEngine = new RiskEngine();
+    this.weatherOverride = null;
 
     this.activeEvent = this.scheduleManager.getActiveEvent(this.currentSeconds);
     this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
@@ -36,21 +41,25 @@ export class SimulationEngine {
 
   start() {
     this.isRunning = true;
+    this.startBackgroundTimer();
     return this.getState();
   }
 
   pause() {
     this.isRunning = false;
+    this.stopBackgroundTimer();
     return this.getState();
   }
 
   resume() {
     this.isRunning = true;
+    this.startBackgroundTimer();
     return this.getState();
   }
 
   reset() {
     this.isRunning = false;
+    this.stopBackgroundTimer();
     this.currentSeconds = timeToSeconds(this.initialTimeStr);
     this.tickCount = 0;
     this.rng = new SeededRNG(42);
@@ -78,10 +87,54 @@ export class SimulationEngine {
       agent.status = (agent.currentNode === agent.destination) ? AgentStatus.ARRIVED : AgentStatus.WAITING;
     }
 
+    this.weatherOverride = null;
     this.activeEvent = this.scheduleManager.getActiveEvent(this.currentSeconds);
     this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
 
     return this.getState();
+  }
+
+  startBackgroundTimer() {
+    this.stopBackgroundTimer();
+    
+    const runTick = () => {
+      if (!this.isRunning) return;
+      
+      this.tick();
+      
+      if (this.socketGateway) {
+        this.socketGateway.broadcastTick(this.getState());
+        
+        // Also broadcast risks update automatically to keep clients in sync
+        const state = this.getState();
+        const highRiskNodes = state.nodes.filter(n => n.riskScore >= 0.50 || n.riskSeverity === 'HIGH' || n.riskSeverity === 'CRITICAL');
+        this.socketGateway.broadcastRiskUpdate({
+          simulationId: state.simulationId,
+          timestamp: new Date().toISOString(),
+          highRiskCount: highRiskNodes.length,
+          nodes: state.nodes
+        });
+      }
+      
+      const interval = 1000 / (this.speedMultiplier || 1);
+      this.timerId = setTimeout(runTick, interval);
+    };
+
+    const interval = 1000 / (this.speedMultiplier || 1);
+    this.timerId = setTimeout(runTick, interval);
+  }
+
+  stopBackgroundTimer() {
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
+  }
+
+  updateTimerSpeed() {
+    if (this.isRunning) {
+      this.startBackgroundTimer();
+    }
   }
 
   tick() {
@@ -92,7 +145,16 @@ export class SimulationEngine {
     const prevEvent = this.activeEvent;
     
     this.activeEvent = this.scheduleManager.getActiveEvent(this.currentSeconds);
-    this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
+    if (this.weatherOverride) {
+      const val = this.weatherOverride;
+      this.activeWeather = {
+        condition: val,
+        intensity: val === 'heavy_rain' ? 0.9 : val === 'rain' ? 0.75 : val === 'cloudy' ? 0.25 : 0.1,
+        speedMultiplier: val === 'heavy_rain' ? 0.70 : val === 'rain' ? 0.85 : val === 'cloudy' ? 0.95 : 1.0
+      };
+    } else {
+      this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
+    }
 
     const graph = this.storage.getVenueGraphSync();
     const agents = Array.from(this.storage.agentsMap.values());
@@ -127,7 +189,8 @@ export class SimulationEngine {
         const nextNodeId = agent.getNextNode();
         if (nextNodeId) {
           const edge = graph.getEdgeBetween(agent.currentNode, nextNodeId);
-          if (edge && edge.isTraversable()) {
+          const nextNode = graph.getNode(nextNodeId);
+          if (edge && edge.isTraversable() && (!nextNode || !nextNode.isDisabled)) {
             const stepDistance = agent.speedMps * this.activeWeather.speedMultiplier * this.tickSeconds;
             agent.distanceWalkedOnCurrentEdge += stepDistance;
 
@@ -181,13 +244,18 @@ export class SimulationEngine {
       const risk = risks.get(n.id);
       const queueLen = this.queueEngine.getQueueLength(n.id);
       const waitTimeMin = this.queueEngine.getWaitTimeMinutes(n.id);
+      let dispersedTo = null;
+      if (n.isDisabled) {
+        dispersedTo = graph.getNearestActiveNeighbor(n.id);
+      }
       return {
         ...nodeObj,
         riskScore: risk ? risk.riskScore : 0,
         riskSeverity: risk ? risk.severity : 'SAFE',
         riskBreakdown: risk ? risk.breakdown : null,
         queueLength: queueLen,
-        queueWaitTimeMin: waitTimeMin
+        queueWaitTimeMin: waitTimeMin,
+        dispersedTo
       };
     }) : [];
 
@@ -203,5 +271,31 @@ export class SimulationEngine {
       queues: this.queueEngine.toJSON(),
       agentCount: this.storage.agentsMap.size
     };
+  }
+
+  loadCustomDataset(graphJson, agentsCsvText, scheduleCsvText) {
+    const loader = new DataLoader('');
+    const dataStats = loader.loadCustomAndHydrate(
+      this.storage,
+      graphJson,
+      agentsCsvText,
+      scheduleCsvText
+    );
+
+    this.metadata = this.storage.metadata || {};
+    this.scheduleManager = new ScheduleWeatherManager(
+      Array.isArray(this.metadata.schedule) ? this.metadata.schedule : [],
+      Array.isArray(this.metadata.weather) ? this.metadata.weather : []
+    );
+    this.destinationSelector = new DestinationSelector(this.metadata, this.rng);
+    this.queueEngine = new QueueEngine(this.metadata.queueService || {});
+
+    this.reset();
+    
+    if (this.socketGateway) {
+      this.socketGateway.broadcastTick(this.getState());
+    }
+
+    return dataStats;
   }
 }

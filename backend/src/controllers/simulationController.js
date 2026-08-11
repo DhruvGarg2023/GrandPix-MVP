@@ -62,6 +62,17 @@ export class SimulationController {
     }
   };
 
+  setSpeed = async (req, res) => {
+    try {
+      const speed = Math.max(1, parseInt(req.body?.speed || 1, 10));
+      this.simEngine.speedMultiplier = speed;
+      this.simEngine.updateTimerSpeed();
+      res.json({ status: 'ok', message: `Speed multiplier set to ${speed}x`, speed });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to set speed multiplier', message: err.message });
+    }
+  };
+
   getSimulationState = async (req, res) => {
     try {
       const state = this.simEngine.getState();
@@ -86,7 +97,12 @@ export class SimulationController {
       }));
 
       const predictionsMap = await this.predictionAdapter.predictBatch(featureItems);
-      const predictions = Array.from(predictionsMap.values());
+      const predictions = Array.from(predictionsMap.values()).map(p => ({
+        nodeId: p.zone,
+        currentDensity: p.currentDensityRatio,
+        predictedDensity10min: p.predictedDensity10minRatio,
+        delta: p.delta
+      }));
 
       res.json({
         simulationId: state.simulationId,
@@ -121,6 +137,31 @@ export class SimulationController {
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch risks', message: err.message });
+    }
+  };
+
+  importDataset = async (req, res) => {
+    try {
+      const { graphJson, agentsCsv, scheduleCsv } = req.body || {};
+      if (!graphJson) {
+        return res.status(400).json({ error: 'Bad Request', message: "Field 'graphJson' is required for dataset import." });
+      }
+
+      const dataStats = this.simEngine.loadCustomDataset(
+        graphJson,
+        agentsCsv || null,
+        scheduleCsv || null
+      );
+
+      res.status(201).json({
+        status: 'ok',
+        message: 'Custom dataset successfully loaded and simulation reset',
+        stats: dataStats,
+        state: this.simEngine.getState()
+      });
+    } catch (err) {
+      console.error('[Import Dataset Error]', err);
+      res.status(500).json({ error: 'Failed to import dataset', message: err.message });
     }
   };
 }

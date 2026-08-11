@@ -64,7 +64,7 @@ export default function NodeTooltip({ node, position }: NodeTooltipProps) {
             <span>OCCUPANCY:</span>
           </span>
           <span className="font-extrabold text-white">
-            {(node.occupancy || 0).toLocaleString()} / {(node.capacity || 0).toLocaleString()}
+            {(node.currentOccupancy !== undefined ? node.currentOccupancy : node.occupancy || 0).toLocaleString()} / {(node.capacity || 0).toLocaleString()}
           </span>
         </div>
         <div className="h-2 bg-[#080203] rounded-full overflow-hidden border border-red-950">

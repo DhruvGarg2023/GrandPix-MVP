@@ -57,6 +57,14 @@ export class QueueEngine {
     return false; // Queue full
   }
 
+  clearQueue(nodeId) {
+    const service = this.services.get(nodeId);
+    if (service) {
+      service.queue = [];
+      service.accumulatedServiceProgress = 0;
+    }
+  }
+
   processTick(tickSeconds, graph) {
     const servicedAgents = [];
 

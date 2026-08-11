@@ -9,6 +9,7 @@ interface CircuitMapProps {
   edges?: EdgeState[];
   onNodeClick?: (nodeId: string) => void;
   onEdgeClick?: (edgeId: string) => void;
+  highlightedPath?: string[];
 }
 
 // 2D Circuit Node Positions matching Silverstone Circuit graph geometry
@@ -89,6 +90,7 @@ export default function CircuitMap({
   edges = DEFAULT_EDGES,
   onNodeClick = () => {},
   onEdgeClick = () => {},
+  highlightedPath = [],
 }: CircuitMapProps) {
   const [hoveredNode, setHoveredNode] = useState<NodeState | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -99,8 +101,11 @@ export default function CircuitMap({
   (nodes.length > 0 ? nodes : DEFAULT_NODES).forEach((n) => nodeMap.set(n.id, n));
 
   // Risk Color Lookup Helper
-  const getNodeColor = (sev: string = 'SAFE') => {
-    switch (sev) {
+  const getNodeColor = (node: NodeState) => {
+    if (node.isDisabled) {
+      return { fill: '#334155', stroke: '#64748B', glow: 'rgba(71,85,105,0.4)' }; // Slate grey closed state
+    }
+    switch (node.riskSeverity) {
       case 'CRITICAL':
         return { fill: '#FF1801', stroke: '#FFFFFF', glow: 'rgba(255,24,1,0.9)' };
       case 'HIGH':
@@ -111,6 +116,25 @@ export default function CircuitMap({
         return { fill: '#10B981', stroke: '#A7F3D0', glow: 'rgba(16,185,129,0.5)' };
     }
   };
+
+  // Construct path links to highlight paths for spectator routing
+  const pathLinks = new Set<string>();
+  if (highlightedPath && highlightedPath.length > 1) {
+    for (let i = 0; i < highlightedPath.length - 1; i++) {
+      pathLinks.add(`${highlightedPath[i]}->${highlightedPath[i + 1]}`);
+      pathLinks.add(`${highlightedPath[i + 1]}->${highlightedPath[i]}`);
+    }
+  }
+
+  // Extract crowd redirection links for disabled nodes
+  const disabledRedirections = Array.from(nodeMap.values())
+    .filter((n) => n.isDisabled && n.dispersedTo)
+    .map((n) => {
+      const fromPos = NODE_POSITIONS[n.id];
+      const toPos = NODE_POSITIONS[n.dispersedTo!];
+      return { from: n.id, to: n.dispersedTo!, fromPos, toPos };
+    })
+    .filter((r) => r.fromPos && r.toPos);
 
   return (
     <div className="relative w-full h-full min-h-[460px] bg-[#070102] rounded-xl overflow-hidden border border-red-900/40 select-none">
@@ -150,6 +174,8 @@ export default function CircuitMap({
             const midX = (fromPos.x + toPos.x) / 2;
             const midY = (fromPos.y + toPos.y) / 2;
 
+            const isHighlighted = pathLinks.has(`${edge.from}->${edge.to}`) || pathLinks.has(`${edge.to}->${edge.from}`);
+
             return (
               <g key={edge.id} className="cursor-pointer" onClick={() => onEdgeClick(edge.id)}>
                 {/* Edge Path Line */}
@@ -165,8 +191,23 @@ export default function CircuitMap({
                   className="transition-all duration-300 hover:stroke-red-400"
                 />
 
+                {/* Spectator highlighted route */}
+                {isHighlighted && (
+                  <line
+                    x1={fromPos.x}
+                    y1={fromPos.y}
+                    x2={toPos.x}
+                    y2={toPos.y}
+                    stroke="#06B6D4"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    opacity="0.85"
+                    className="animate-pulse"
+                  />
+                )}
+
                 {/* Animated Edge Flow Line if Active Flow */}
-                {!isBlocked && edge.flowRate > 0 && (
+                {!isBlocked && edge.flowRate > 0 && !isHighlighted && (
                   <line
                     x1={fromPos.x}
                     y1={fromPos.y}
@@ -192,22 +233,72 @@ export default function CircuitMap({
           })}
         </g>
 
-        {/* 2. Render 18 Circuit Nodes */}
-        <g className="nodes-layer">
-          {Object.entries(NODE_POSITIONS).map(([id, pos]) => {
-            const nodeData = nodeMap.get(id) || {
-              id,
-              type: 'zone',
-              capacity: 5000,
-              occupancy: 1000,
-              densityRatio: 0.20,
-              riskScore: 0.15,
-              riskSeverity: 'SAFE',
-            };
+        {/* Inline styles for custom dot flow animations */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes dash {
+            to {
+              stroke-dashoffset: -20;
+            }
+          }
+          .animate-dash-redir {
+            stroke-dasharray: 6, 4;
+            animation: dash 1s linear infinite;
+          }
+        `}} />
 
-            const colors = getNodeColor(nodeData.riskSeverity);
+        {/* Render Redirection Flow Arrows for Disabled Nodes */}
+        <g className="redirections-layer">
+          {disabledRedirections.map((r, idx) => {
+            const dx = r.toPos.x - r.fromPos.x;
+            const dy = r.toPos.y - r.fromPos.y;
+            const dr = Math.sqrt(dx * dx + dy * dy);
+            
+            // Curved arc path between nodes
+            const pathData = `M${r.fromPos.x},${r.fromPos.y} A${dr * 1.2},${dr * 1.2} 0 0,1 ${r.toPos.x},${r.toPos.y}`;
+            return (
+              <g key={`redir-${idx}`} className="opacity-80">
+                <path
+                  d={pathData}
+                  fill="none"
+                  stroke="#FF1801"
+                  strokeWidth="2.5"
+                  className="animate-dash-redir"
+                  markerEnd="url(#flow-arrow)"
+                />
+                {/* Central warning redirection dot */}
+                <circle
+                  cx={(r.fromPos.x + r.toPos.x) / 2}
+                  cy={(r.fromPos.y + r.toPos.y) / 2 - 5}
+                  r="7"
+                  fill="#0D0305"
+                  stroke="#FF1801"
+                  strokeWidth="1.5"
+                />
+                <text
+                  x={(r.fromPos.x + r.toPos.x) / 2}
+                  y={(r.fromPos.y + r.toPos.y) / 2 - 2.5}
+                  textAnchor="middle"
+                  fill="#FF1801"
+                  fontSize="7"
+                  fontWeight="900"
+                >
+                  ⇄
+                </text>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* 2. Render Graph Nodes */}
+        <g className="nodes-layer">
+          {(nodes.length > 0 ? nodes : DEFAULT_NODES).map((nodeData) => {
+            const id = nodeData.id;
+            const pos = NODE_POSITIONS[id];
+            if (!pos) return null; // Skip nodes that do not have coordinates registered on the Silverstone track SVG
+
+            const colors = getNodeColor(nodeData);
             const isSelected = selectedNodeId === id;
-            const isCritical = nodeData.riskSeverity === 'CRITICAL';
+            const isCritical = nodeData.riskSeverity === 'CRITICAL' && !nodeData.isDisabled;
 
             return (
               <g
@@ -241,24 +332,28 @@ export default function CircuitMap({
                   className="shadow-lg transition-transform group-hover:scale-125"
                 />
 
-                {/* Node ID Badge Label */}
-                <text
-                  y="4"
-                  textAnchor="middle"
-                  fill="#FFFFFF"
-                  fontSize="8"
-                  fontWeight="900"
-                  fontFamily="monospace"
-                  className="pointer-events-none"
-                >
-                  {id.replace(/_/g, '').slice(0, 4)}
-                </text>
+                {/* Node ID Badge Label or Closed Cross */}
+                {nodeData.isDisabled ? (
+                  <path d="M-5,-5 L5,5 M5,-5 L-5,5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" className="pointer-events-none" />
+                ) : (
+                  <text
+                    y="4"
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="8"
+                    fontWeight="900"
+                    fontFamily="monospace"
+                    className="pointer-events-none"
+                  >
+                    {id.replace(/_/g, '').slice(0, 4)}
+                  </text>
+                )}
 
                 {/* Node Label Caption underneath */}
                 <text
                   y="26"
                   textAnchor="middle"
-                  fill="#FF8888"
+                  fill={nodeData.isDisabled ? '#94A3B8' : '#FF8888'}
                   fontSize="9"
                   fontWeight="700"
                   fontFamily="sans-serif"
@@ -268,26 +363,30 @@ export default function CircuitMap({
                 </text>
 
                 {/* Density % Badge */}
-                <rect
-                  x="-16"
-                  y="-26"
-                  width="32"
-                  height="12"
-                  rx="3"
-                  fill="#0D0305"
-                  stroke={colors.fill}
-                  strokeWidth="1"
-                />
-                <text
-                  y="-17"
-                  textAnchor="middle"
-                  fill="#FFFFFF"
-                  fontSize="7"
-                  fontWeight="800"
-                  fontFamily="monospace"
-                >
-                  {((nodeData.densityRatio || 0) * 100).toFixed(0)}%
-                </text>
+                {!nodeData.isDisabled && (
+                  <>
+                    <rect
+                      x="-16"
+                      y="-26"
+                      width="32"
+                      height="12"
+                      rx="3"
+                      fill="#0D0305"
+                      stroke={colors.fill}
+                      strokeWidth="1"
+                    />
+                    <text
+                      y="-17"
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize="7"
+                      fontWeight="800"
+                      fontFamily="monospace"
+                    >
+                      {((nodeData.densityRatio || 0) * 100).toFixed(0)}%
+                    </text>
+                  </>
+                )}
               </g>
             );
           })}

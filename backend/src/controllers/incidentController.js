@@ -9,6 +9,25 @@ export class IncidentController {
     return this.socketGateway || req.app?.get('socketGateway') || null;
   }
 
+  _broadcastStateAndRisks(req) {
+    const gateway = this._getSocketGateway(req);
+    if (!gateway) return;
+    const state = this.simEngine.getState();
+    if (typeof gateway.broadcastTick === 'function') {
+      gateway.broadcastTick(state);
+    }
+    
+    if (typeof gateway.broadcastRiskUpdate === 'function') {
+      const highRiskNodes = state.nodes.filter(n => n.riskScore >= 0.50 || n.riskSeverity === 'HIGH' || n.riskSeverity === 'CRITICAL');
+      gateway.broadcastRiskUpdate({
+        simulationId: state.simulationId,
+        timestamp: new Date().toISOString(),
+        highRiskCount: highRiskNodes.length,
+        nodes: state.nodes
+      });
+    }
+  }
+
   triggerIncident = async (req, res) => {
     const { type, edge_id, node_id, value, duration_min } = req.body || {};
 
@@ -16,7 +35,7 @@ export class IncidentController {
       return res.status(400).json({ error: 'Bad Request', message: "Field 'type' is required." });
     }
 
-    const validTypes = ['route_closure', 'weather_change', 'medical_incident'];
+    const validTypes = ['route_closure', 'weather_change', 'medical_incident', 'node_disable'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({ error: 'Bad Request', message: `Invalid incident type '${type}'. Must be one of: ${validTypes.join(', ')}` });
     }
@@ -44,9 +63,8 @@ export class IncidentController {
 
       if (gateway) {
         gateway.broadcastIncident(incidentPayload);
-        // Also broadcast tick state update to refresh all clients
-        gateway.broadcastTick(this.simEngine.getState());
       }
+      this._broadcastStateAndRisks(req);
 
       return res.status(201).json({
         status: 'ok',
@@ -65,6 +83,7 @@ export class IncidentController {
         return res.status(400).json({ error: 'Bad Request', message: `Invalid weather value '${value}'. Must be one of: ${validWeather.join(', ')}` });
       }
 
+      this.simEngine.weatherOverride = value;
       this.simEngine.activeWeather = {
         condition: value,
         intensity: value === 'heavy_rain' ? 0.9 : value === 'rain' ? 0.75 : value === 'cloudy' ? 0.25 : 0.1,
@@ -80,8 +99,8 @@ export class IncidentController {
 
       if (gateway) {
         gateway.broadcastIncident(incidentPayload);
-        gateway.broadcastTick(this.simEngine.getState());
       }
+      this._broadcastStateAndRisks(req);
 
       return res.status(201).json({
         status: 'ok',
@@ -114,6 +133,70 @@ export class IncidentController {
         status: 'ok',
         incident: incidentPayload,
         message: `Medical incident logged at '${node_id}'. Emergency response corridor reserved.`
+      });
+    }
+
+    if (type === 'node_disable') {
+      if (!node_id || typeof node_id !== 'string') {
+        return res.status(400).json({ error: 'Bad Request', message: "Field 'node_id' is required for node_disable." });
+      }
+      const node = graph.getNode(node_id);
+      if (!node) {
+        return res.status(404).json({ error: 'Not Found', message: `Node '${node_id}' not found in venue graph.` });
+      }
+
+      const isDisabled = req.body.isDisabled !== undefined ? req.body.isDisabled : !node.isDisabled;
+      
+      let dispersedCount = 0;
+      let targetNodeId = null;
+
+      if (isDisabled) {
+        node.disable();
+        this.simEngine.queueEngine.clearQueue(node_id);
+        const nearestNodeId = graph.getNearestActiveNeighbor(node_id);
+        targetNodeId = nearestNodeId;
+        if (nearestNodeId) {
+          const nearestNode = graph.getNode(nearestNodeId);
+          const agents = Array.from(this.storage.agentsMap.values());
+          
+          for (const agent of agents) {
+            if (agent.currentNode === node_id) {
+              agent.currentNode = nearestNodeId;
+              agent.route = [];
+              agent.status = 'waiting';
+              dispersedCount++;
+            }
+          }
+          
+          if (dispersedCount > 0) {
+            node.setOccupancy(0);
+            nearestNode.addOccupancy(dispersedCount);
+          }
+        } else {
+          node.setOccupancy(0);
+        }
+      } else {
+        node.enable();
+      }
+
+      const incidentPayload = {
+        type,
+        node_id,
+        isDisabled,
+        dispersedCount,
+        targetNodeId,
+        timestamp: new Date().toISOString()
+      };
+
+      if (gateway) {
+        gateway.broadcastIncident(incidentPayload);
+      }
+      this._broadcastStateAndRisks(req);
+
+      return res.status(201).json({
+        status: 'ok',
+        incident: incidentPayload,
+        message: `Node '${node_id}' successfully ${isDisabled ? 'disabled' : 'enabled'}. Dispersed ${dispersedCount} agents to '${targetNodeId || 'none'}'.`
       });
     }
 

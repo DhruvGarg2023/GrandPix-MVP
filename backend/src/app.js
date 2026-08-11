@@ -15,7 +15,7 @@ export function createApp(dataPath = '../data') {
 
   // Middleware
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
 
   // Instantiate Storage & Load Dataset
   const storage = new InMemoryStorage();
@@ -56,6 +56,8 @@ export function createApp(dataPath = '../data') {
   app.post('/api/simulations/:id/resume', simController.resumeSimulation);
   app.post('/api/simulations/:id/reset', simController.resetSimulation);
   app.post('/api/simulations/:id/tick', simController.advanceTick);
+  app.post('/api/simulations/:id/speed', simController.setSpeed);
+  app.post('/api/simulations/:id/import', simController.importDataset);
   app.get('/api/simulations/:id/state', simController.getSimulationState);
 
   // 2. Predictions & Risks
