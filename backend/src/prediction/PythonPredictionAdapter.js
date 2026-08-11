@@ -7,7 +7,7 @@ import { config } from '../config/env.js';
 export class PythonPredictionAdapter {
   constructor(predictionUrl = config.pythonPredictionUrl) {
     this.predictionUrl = predictionUrl;
-    this.timeoutMs = 2000;
+    this.timeoutMs = 5000;
     this.lastKnownPredictions = new Map(); // nodeId -> { predictedDensity, delta }
   }
 
@@ -16,10 +16,38 @@ export class PythonPredictionAdapter {
     for (const item of items) {
       const currentDensity = item.current_density_ratio || 0;
       const flowRatio = item.flow_rate_ratio || 0.5;
+      const weather = item.weather || 'sunny';
+      const event = (item.event || 'PRACTICE').toUpperCase();
+      const queueLength = item.queue_length || 0;
+      const blockedRoute = item.blocked_route || 0;
+
+      // Slower walking speeds in rain/storms increase localized density accumulation
+      let weatherImpact = 0;
+      if (weather === 'heavy_rain') weatherImpact = 0.08;
+      else if (weather === 'rain') weatherImpact = 0.04;
+      else if (weather === 'cloudy') weatherImpact = 0.01;
+
+      // Event demand shifts
+      let eventImpact = 0.01;
+      if (event === 'ENTRY_RUSH' && item.zone.startsWith('GATE')) {
+        eventImpact = 0.09; // gates fill up during entry rush
+      } else if (event === 'EXIT_RUSH' && item.zone.startsWith('EXIT')) {
+        eventImpact = 0.12; // exits fill up during exit rush
+      } else if (event === 'RACE' && item.zone.startsWith('GS')) {
+        eventImpact = 0.07; // grandstands fill up during race
+      }
+
+      // Blocked edges increase bottleneck densities
+      const routingImpact = blockedRoute ? 0.15 : 0;
+
+      // Queue build-up adds delay
+      const queueImpact = queueLength > 10 ? 0.03 : 0;
+
+      const flowImpact = (flowRatio > 0.8) ? 0.05 : (flowRatio > 0.5) ? 0.02 : 0.005;
+
+      const totalAccumulation = weatherImpact + eventImpact + routingImpact + queueImpact + flowImpact;
       
-      // Extrapolate slight trend based on flow pressure
-      const trend = (flowRatio > 0.8) ? 0.08 : (flowRatio > 0.5) ? 0.04 : 0.01;
-      const fallbackDensity = parseFloat(Math.min(1.2, Math.max(0.0, currentDensity + trend)).toFixed(4));
+      const fallbackDensity = parseFloat(Math.min(1.2, Math.max(0.0, currentDensity + totalAccumulation)).toFixed(4));
       const delta = parseFloat((fallbackDensity - currentDensity).toFixed(4));
 
       fallbackResults.set(item.zone, {

@@ -7,6 +7,7 @@ const { app, simEngine } = createApp();
 
 const httpServer = http.createServer(app);
 const socketGateway = new SocketGateway(httpServer, simEngine);
+simEngine.socketGateway = socketGateway;
 
 // Bind socketGateway to app for route controllers if needed
 app.set('socketGateway', socketGateway);

@@ -7,12 +7,15 @@ export interface NodeState {
   type: string;
   capacity: number;
   occupancy: number;
+  currentOccupancy?: number;
   densityRatio: number;
   riskScore: number;
   riskSeverity: RiskSeverity;
   queueLength?: number;
   waitMinutes?: number;
   coordinates?: { x: number; y: number; lat?: number; lng?: number };
+  isDisabled?: boolean;
+  dispersedTo?: string | null;
 }
 
 export interface EdgeState {
@@ -38,6 +41,8 @@ export interface SimulationTickPayload {
   weather: WeatherState;
   nodes: NodeState[];
   edges: EdgeState[];
+  isRunning: boolean;
+  agentCount?: number;
   agentsSummary?: {
     total: number;
     walking: number;
@@ -141,8 +146,10 @@ export interface SpectatorRouteResponse {
   origin: string;
   destination: string;
   optimalPath: string[]; // Node IDs
+  path?: string[]; // Node IDs
   totalDistanceM: number;
   estimatedWalkMinutes: number;
+  estimatedWalkingTimeMin?: number;
   avoidsBlockedEdges: boolean;
   warnings: string[];
 }

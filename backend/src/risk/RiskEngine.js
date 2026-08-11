@@ -106,8 +106,26 @@ export class RiskEngine {
     if (!graph) return new Map();
 
     const results = new Map();
-    for (const node of graph.getNodes()) {
+    const nodes = graph.getNodes();
+    const exits = nodes.filter(n => n.type === 'exit');
+    const allExitsClosed = exits.length > 0 && exits.every(n => n.isDisabled);
+
+    for (const node of nodes) {
       const risk = this.calculateNodeRisk(node, graph, queueEngine, weather);
+      
+      // Evacuation Bottleneck: Raise risk score of active nodes if evacuations are blocked
+      if (allExitsClosed && node.type !== 'exit' && !node.isDisabled) {
+        risk.riskScore = parseFloat(Math.min(1.0, risk.riskScore + 0.35).toFixed(4));
+        risk.severity = this.getSeverity(risk.riskScore);
+        risk.breakdown.evacuationBlocked = 0.35;
+      }
+
+      // Disabled Node: Out of service, set risk score to 0
+      if (node.isDisabled) {
+        risk.riskScore = 0;
+        risk.severity = RiskSeverity.SAFE;
+      }
+
       results.set(node.id, risk);
     }
     return results;

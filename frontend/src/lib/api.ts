@@ -59,6 +59,13 @@ export const api = {
     return fetchJSON(`/api/simulations/${id}/reset`, { method: 'POST' });
   },
 
+  async advanceTick(ticks: number = 1, id: string = 'sim_default'): Promise<{ success: boolean; state: SimulationTickPayload }> {
+    return fetchJSON(`/api/simulations/${id}/tick`, {
+      method: 'POST',
+      body: JSON.stringify({ ticks }),
+    });
+  },
+
   async getSimulationState(id: string = 'sim_default'): Promise<SimulationTickPayload> {
     const data = await fetchJSON<{ success: boolean; state: SimulationTickPayload }>(`/api/simulations/${id}/state`);
     return data.state;
@@ -66,13 +73,11 @@ export const api = {
 
   // Predictions & Risks
   async getPredictions(id: string = 'sim_default'): Promise<PredictionPayload> {
-    const data = await fetchJSON<{ success: boolean; predictions: PredictionPayload }>(`/api/simulations/${id}/predictions`);
-    return data.predictions;
+    return fetchJSON<PredictionPayload>(`/api/simulations/${id}/predictions`);
   },
 
   async getRisks(id: string = 'sim_default'): Promise<RiskSummaryPayload> {
-    const data = await fetchJSON<{ success: boolean; risks: RiskSummaryPayload }>(`/api/simulations/${id}/risks`);
-    return data.risks;
+    return fetchJSON<RiskSummaryPayload>(`/api/simulations/${id}/risks`);
   },
 
   // Incident Trigger
@@ -80,6 +85,14 @@ export const api = {
     return fetchJSON(`/api/simulations/${id}/incidents`, {
       method: 'POST',
       body: JSON.stringify(incident),
+    });
+  },
+
+  // Set Simulation Speed
+  async setSpeed(speed: number, id: string = 'sim_default'): Promise<{ success: boolean; speed: number }> {
+    return fetchJSON(`/api/simulations/${id}/speed`, {
+      method: 'POST',
+      body: JSON.stringify({ speed }),
     });
   },
 
@@ -99,8 +112,7 @@ export const api = {
   },
 
   async getSpectatorRoutes(from: string, to: string): Promise<SpectatorRouteResponse> {
-    const data = await fetchJSON<{ success: boolean; route: SpectatorRouteResponse }>(`/api/spectator/routes?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
-    return data.route;
+    return fetchJSON<SpectatorRouteResponse>(`/api/spectator/routes?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
   },
 
   // AI Copilot
@@ -110,5 +122,18 @@ export const api = {
       body: JSON.stringify({ simulationId: id }),
     });
     return data.recommendation;
+  },
+
+  // Dataset Import
+  async importDataset(
+    graphJson: any,
+    agentsCsv: string | null,
+    scheduleCsv: string | null,
+    id: string = 'sim_default'
+  ): Promise<{ status: string; message: string; stats: any; state: SimulationTickPayload }> {
+    return fetchJSON(`/api/simulations/${id}/import`, {
+      method: 'POST',
+      body: JSON.stringify({ graphJson, agentsCsv, scheduleCsv }),
+    });
   }
 };

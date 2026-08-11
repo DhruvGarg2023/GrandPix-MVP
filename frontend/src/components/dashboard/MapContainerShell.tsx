@@ -13,6 +13,7 @@ interface MapContainerShellProps {
   activeIncident?: IncidentPayload | null;
   onNodeSelect?: (nodeId: string) => void;
   onEdgeSelect?: (edgeId: string) => void;
+  highlightedPath?: string[];
 }
 
 export default function MapContainerShell({
@@ -24,6 +25,7 @@ export default function MapContainerShell({
   activeIncident,
   onNodeSelect = () => {},
   onEdgeSelect = () => {},
+  highlightedPath = [],
 }: MapContainerShellProps) {
   return (
     <div className="f1-card-crimson p-5 min-h-[500px] flex flex-col justify-between relative overflow-hidden">
@@ -73,6 +75,7 @@ export default function MapContainerShell({
           edges={edges}
           onNodeClick={onNodeSelect}
           onEdgeClick={onEdgeSelect}
+          highlightedPath={highlightedPath}
         />
       </div>
 

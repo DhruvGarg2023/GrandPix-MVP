@@ -89,6 +89,23 @@ export class VenueGraph {
     return neighbors;
   }
 
+  getNearestActiveNeighbor(nodeId) {
+    const neighbors = this.getNeighbors(nodeId);
+    let nearestNodeId = null;
+    let minDistance = Infinity;
+
+    for (const { edge, targetNodeId } of neighbors) {
+      const neighborNode = this.getNode(targetNodeId);
+      if (neighborNode && !neighborNode.isDisabled) {
+        if (edge.distanceM < minDistance) {
+          minDistance = edge.distanceM;
+          nearestNodeId = targetNodeId;
+        }
+      }
+    }
+    return nearestNodeId;
+  }
+
   getEdgeBetween(fromNodeId, toNodeId) {
     const outgoing = this.getOutgoingEdges(fromNodeId);
     const match = outgoing.find(e => e.to === toNodeId);
@@ -119,6 +136,7 @@ export class VenueGraph {
   resetOccupancies() {
     for (const node of this.nodes.values()) {
       node.setOccupancy(0);
+      node.isDisabled = false;
     }
   }
 

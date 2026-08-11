@@ -7,6 +7,7 @@ export class Node {
     this.type = type;
     this.capacity = capacity;
     this.currentOccupancy = 0;
+    this.isDisabled = false;
   }
 
   get densityRatio() {
@@ -26,13 +27,22 @@ export class Node {
     this.currentOccupancy = Math.max(0, this.currentOccupancy - count);
   }
 
+  disable() {
+    this.isDisabled = true;
+  }
+
+  enable() {
+    this.isDisabled = false;
+  }
+
   toJSON() {
     return {
       id: this.id,
       type: this.type,
       capacity: this.capacity,
       currentOccupancy: this.currentOccupancy,
-      densityRatio: parseFloat(this.densityRatio.toFixed(4))
+      densityRatio: parseFloat(this.densityRatio.toFixed(4)),
+      isDisabled: this.isDisabled
     };
   }
 }
