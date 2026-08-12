@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { subscribeToSimulationTicks, subscribeToRecommendations, subscribeToRisks, subscribeToPredictions } from '@/lib/socket';
+import {
+  subscribeToSimulationTicks,
+  subscribeToRecommendations,
+  subscribeToRisks,
+  subscribeToPredictions,
+  subscribeToConnectionStatus
+} from '@/lib/socket';
 import { SimulationTickPayload, RecommendationPayload, RiskSummaryPayload, PredictionPayload, IncidentPayload } from '@/types';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import SimulationToolbar from '@/components/dashboard/SimulationToolbar';
@@ -24,29 +30,31 @@ export default function DashboardPage() {
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial Data Fetch & WebSocket Event Subscriptions
-  useEffect(() => {
-    async function loadInitialData() {
-      try {
-        const state = await api.getSimulationState();
-        setSimulationState(state);
-        setIsConnected(true);
+  // Fetch full simulation state snapshot from backend REST endpoints
+  const refreshSimulationSnapshot = useCallback(async () => {
+    try {
+      const state = await api.getSimulationState();
+      setSimulationState(state);
+      setIsConnected(true);
+      setError(null);
 
-        const rec = await api.getAICopilotRecommendation();
-        setRecommendation(rec);
+      const rec = await api.getAICopilotRecommendation();
+      setRecommendation(rec);
 
-        const risks = await api.getRisks();
-        setRiskSummary(risks);
-      } catch (err: any) {
-        console.warn('Initial REST load fallback (Server offline or initializing):', err.message);
-        setError(err.message || 'Failed to connect to backend server');
-        setIsConnected(false);
-      }
+      const risks = await api.getRisks();
+      setRiskSummary(risks);
+    } catch (err: any) {
+      console.warn('Backend connection fallback:', err.message);
+      setError(err.message || 'Failed to connect to backend server');
+      setIsConnected(false);
     }
+  }, []);
 
-    loadInitialData();
+  // Initial Data Fetch & Real-Time Socket.IO Event Subscriptions
+  useEffect(() => {
+    refreshSimulationSnapshot();
 
-    // Subscribe to Socket.IO channels
+    // Subscribe to Socket.IO live simulation:tick channel
     const unsubTick = subscribeToSimulationTicks((tickData) => {
       setSimulationState(tickData);
       setIsConnected(true);
@@ -65,21 +73,35 @@ export default function DashboardPage() {
       setPredictions(predData);
     });
 
+    const unsubConn = subscribeToConnectionStatus(
+      () => {
+        setIsConnected(true);
+        setError(null);
+        refreshSimulationSnapshot();
+      },
+      () => {
+        setIsConnected(false);
+      }
+    );
+
     return () => {
       unsubTick();
       unsubRec();
       unsubRisk();
       unsubPred();
+      unsubConn();
     };
-  }, []);
+  }, [refreshSimulationSnapshot]);
 
-  // Simulation Controls Event Handlers
+  // Real-Time Simulation Control Action Handlers
   const handleStart = async () => {
     try {
       await api.startSimulation();
       setIsRunning(true);
+      setError(null);
     } catch (err: any) {
       console.error('Failed to start simulation:', err);
+      setError(err.message || 'Failed to start simulation');
     }
   };
 
@@ -95,10 +117,14 @@ export default function DashboardPage() {
   const handleReset = async () => {
     try {
       const res = await api.resetSimulation();
-      setSimulationState(res.state);
+      if (res.state) {
+        setSimulationState(res.state);
+      }
       setIsRunning(false);
       setActiveIncident(null);
       setSelectedNodeId(null);
+      setError(null);
+      refreshSimulationSnapshot();
     } catch (err: any) {
       console.error('Failed to reset simulation:', err);
     }
@@ -131,9 +157,10 @@ export default function DashboardPage() {
         isConnected={isConnected}
       />
 
-      {/* Simulation Controls Toolbar */}
+      {/* Real-time Simulation Controls Toolbar */}
       <SimulationToolbar
         isRunning={isRunning}
+        tickNumber={simulationState?.tick || 0}
         speedMultiplier={speedMultiplier}
         onStart={handleStart}
         onPause={handlePause}
@@ -142,17 +169,17 @@ export default function DashboardPage() {
       />
 
       {/* Backend Offline Error Notification */}
-      {error && (
+      {error && !isConnected && (
         <div className="bg-red-950/90 border border-red-600 text-red-100 p-4 rounded-xl text-xs font-mono flex items-center justify-between shadow-[0_0_20px_rgba(225,6,0,0.3)]">
           <div>
             <strong className="text-red-400 uppercase">⚠️ Backend Gateway Offline:</strong> {error}
             <div className="text-[11px] text-red-300/80 mt-0.5">Ensure backend server is running on <code className="bg-red-900/60 px-1 py-0.5 rounded text-white">http://localhost:5000</code>.</div>
           </div>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refreshSimulationSnapshot()}
             className="f1-btn-pill-red px-3 py-1.5 text-[11px]"
           >
-            RETRY
+            RETRY CONNECTION
           </button>
         </div>
       )}

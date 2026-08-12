@@ -18,7 +18,7 @@ export function getSocket(): Socket {
     socket = io(WS_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 20,
       reconnectionDelay: 1000,
     });
 
@@ -36,6 +36,23 @@ export function getSocket(): Socket {
   }
 
   return socket;
+}
+
+export function isSocketConnected(): boolean {
+  return socket ? socket.connected : false;
+}
+
+export function subscribeToConnectionStatus(
+  onConnect: () => void,
+  onDisconnect: () => void
+): () => void {
+  const s = getSocket();
+  s.on('connect', onConnect);
+  s.on('disconnect', onDisconnect);
+  return () => {
+    s.off('connect', onConnect);
+    s.off('disconnect', onDisconnect);
+  };
 }
 
 export function subscribeToSimulationTicks(callback: (tickData: SimulationTickPayload) => void): () => void {

@@ -60,19 +60,19 @@ export const api = {
   },
 
   async getSimulationState(id: string = 'sim_default'): Promise<SimulationTickPayload> {
-    const data = await fetchJSON<{ success: boolean; state: SimulationTickPayload }>(`/api/simulations/${id}/state`);
-    return data.state;
+    const data = await fetchJSON<any>(`/api/simulations/${id}/state`);
+    return data.state || data;
   },
 
   // Predictions & Risks
   async getPredictions(id: string = 'sim_default'): Promise<PredictionPayload> {
-    const data = await fetchJSON<{ success: boolean; predictions: PredictionPayload }>(`/api/simulations/${id}/predictions`);
-    return data.predictions;
+    const data = await fetchJSON<any>(`/api/simulations/${id}/predictions`);
+    return data.predictions || data;
   },
 
   async getRisks(id: string = 'sim_default'): Promise<RiskSummaryPayload> {
-    const data = await fetchJSON<{ success: boolean; risks: RiskSummaryPayload }>(`/api/simulations/${id}/risks`);
-    return data.risks;
+    const data = await fetchJSON<any>(`/api/simulations/${id}/risks`);
+    return data.risks || data;
   },
 
   // Incident Trigger

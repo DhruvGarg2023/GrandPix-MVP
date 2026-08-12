@@ -55,7 +55,6 @@ export function createApp(dataPath = '../data') {
   app.post('/api/simulations/:id/pause', simController.pauseSimulation);
   app.post('/api/simulations/:id/resume', simController.resumeSimulation);
   app.post('/api/simulations/:id/reset', simController.resetSimulation);
-  app.post('/api/simulations/:id/tick', simController.advanceTick);
   app.get('/api/simulations/:id/state', simController.getSimulationState);
 
   // 2. Predictions & Risks

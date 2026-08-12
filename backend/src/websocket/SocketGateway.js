@@ -15,8 +15,10 @@ export class SocketGateway {
 
     this.simEngine = simEngine;
     this.connectedClientsCount = 0;
+    this.tickInterval = null;
 
     this._setupSocketEvents();
+    this.startTickLoop(config.simulationTickMs || 2000);
   }
 
   _setupSocketEvents() {
@@ -42,6 +44,45 @@ export class SocketGateway {
     });
   }
 
+  startTickLoop(intervalMs = 2000) {
+    if (this.tickInterval) return;
+    this.tickInterval = setInterval(() => {
+      if (this.simEngine && this.simEngine.isRunning) {
+        const simState = this.simEngine.tick();
+        this.broadcastTick(simState);
+
+        if (simState && simState.nodes) {
+          const highRiskNodes = simState.nodes.filter(
+            n => n.riskScore >= 0.50 || n.riskSeverity === 'HIGH' || n.riskSeverity === 'CRITICAL'
+          );
+          const risksPayload = {
+            simulationId: simState.simulationId,
+            timestamp: new Date().toISOString(),
+            highRiskCount: highRiskNodes.length,
+            nodes: simState.nodes.map(n => ({
+              id: n.id,
+              type: n.type,
+              currentOccupancy: n.currentOccupancy,
+              capacity: n.capacity,
+              densityRatio: n.densityRatio,
+              riskScore: n.riskScore,
+              riskSeverity: n.riskSeverity,
+              riskBreakdown: n.riskBreakdown
+            }))
+          };
+          this.broadcastRiskUpdate(risksPayload);
+        }
+      }
+    }, intervalMs);
+  }
+
+  stopTickLoop() {
+    if (this.tickInterval) {
+      clearInterval(this.tickInterval);
+      this.tickInterval = null;
+    }
+  }
+
   // Broadcast Channels
 
   broadcastTick(simState) {
@@ -65,6 +106,7 @@ export class SocketGateway {
   }
 
   close() {
+    this.stopTickLoop();
     return new Promise((resolve) => {
       this.io.close(() => {
         console.log('[SocketGateway] Server closed.');

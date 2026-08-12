@@ -31,7 +31,7 @@ export class Node {
       id: this.id,
       type: this.type,
       capacity: this.capacity,
-      currentOccupancy: this.currentOccupancy,
+      occupancy: this.currentOccupancy,
       densityRatio: parseFloat(this.densityRatio.toFixed(4))
     };
   }

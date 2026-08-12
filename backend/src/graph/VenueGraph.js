@@ -120,6 +120,10 @@ export class VenueGraph {
     for (const node of this.nodes.values()) {
       node.setOccupancy(0);
     }
+    for (const edge of this.edges.values()) {
+      edge.currentFlowRate = 0;
+      edge.unblock();
+    }
   }
 
   toJSON() {

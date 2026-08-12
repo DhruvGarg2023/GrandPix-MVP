@@ -1,7 +1,17 @@
 'use client';
 
 import { DensityPrediction } from '@/types';
-import { TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock, AlertTriangle } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ReferenceLine
+} from 'recharts';
 
 interface PredictionTimelineWidgetProps {
   predictions?: DensityPrediction[];
@@ -17,6 +27,14 @@ export default function PredictionTimelineWidget({
   ],
   lastUpdated = '16:20',
 }: PredictionTimelineWidgetProps) {
+  // Format prediction items for Recharts display
+  const chartData = predictions.map((item) => ({
+    zone: item.nodeId.replace(/_/g, ' '),
+    currentPct: Math.round(item.currentDensity * 100),
+    forecastPct: Math.round(item.predictedDensity10min * 100),
+    deltaPct: Math.round(item.delta * 100)
+  }));
+
   return (
     <div className="f1-card-crimson p-5 space-y-4">
       {/* Widget Header */}
@@ -31,37 +49,62 @@ export default function PredictionTimelineWidget({
         </div>
       </div>
 
-      {/* Density Predictions Comparison List */}
-      <div className="space-y-3 font-mono">
-        {predictions.map((pred) => {
+      {/* Recharts Bar Forecast Chart */}
+      <div className="h-44 w-full bg-[#0D0305] p-2 rounded-lg border border-red-950/80">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <XAxis
+              dataKey="zone"
+              tick={{ fill: '#94A3B8', fontSize: 10, fontFamily: 'monospace' }}
+              axisLine={{ stroke: '#450A0A' }}
+              tickLine={false}
+            />
+            <YAxis
+              domain={[0, 100]}
+              tick={{ fill: '#64748B', fontSize: 9, fontFamily: 'monospace' }}
+              axisLine={false}
+              tickLine={false}
+              unit="%"
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#160508',
+                borderColor: '#DC2626',
+                borderRadius: '8px',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontFamily: 'monospace'
+              }}
+              formatter={(value: any) => [`${value}%`, '']}
+            />
+            <Legend
+              wrapperStyle={{ fontSize: '10px', fontFamily: 'monospace', paddingTop: '4px' }}
+            />
+            <ReferenceLine y={85} stroke="#FF1801" strokeDasharray="3 3" label={{ value: 'CRITICAL 85%', fill: '#FF1801', fontSize: 9 }} />
+            <Bar dataKey="currentPct" name="Current Density" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="forecastPct" name="+10m Forecast" fill="#EF4444" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Density Predictions Detailed List */}
+      <div className="space-y-2.5 font-mono">
+        {predictions.slice(0, 3).map((pred) => {
           const isCritical = pred.predictedDensity10min >= 0.85;
           const isHigh = pred.predictedDensity10min >= 0.70;
 
           return (
-            <div key={pred.nodeId} className="bg-[#0D0305] p-3 rounded-lg border border-red-950 space-y-2">
-              <div className="flex justify-between items-center text-xs">
+            <div key={pred.nodeId} className="bg-[#0D0305] p-2.5 rounded-lg border border-red-950/70 flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-2">
+                {isCritical && <AlertTriangle className="w-3.5 h-3.5 text-red-500 animate-pulse" />}
                 <span className="font-extrabold text-white">{pred.nodeId}</span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-slate-400">Current: {(pred.currentDensity * 100).toFixed(0)}%</span>
-                  <span className="text-slate-500">➔</span>
-                  <span className={`font-black ${isCritical ? 'text-red-400 animate-pulse' : isHigh ? 'text-orange-400' : 'text-emerald-400'}`}>
-                    10m Forecast: {(pred.predictedDensity10min * 100).toFixed(0)}%
-                  </span>
-                </div>
               </div>
-
-              {/* Stacked Visual Bar */}
-              <div className="h-2 bg-slate-900 rounded-full overflow-hidden flex border border-red-950">
-                {/* Current Density Portion */}
-                <div
-                  className="bg-red-700 h-full transition-all"
-                  style={{ width: `${Math.min(100, pred.currentDensity * 100)}%` }}
-                ></div>
-                {/* Projected Delta Portion */}
-                <div
-                  className="bg-gradient-to-r from-red-500 to-red-400 h-full opacity-80 transition-all"
-                  style={{ width: `${Math.min(100, Math.max(0, pred.delta * 100))}%` }}
-                ></div>
+              <div className="flex items-center space-x-2 text-[11px]">
+                <span className="text-slate-400">{(pred.currentDensity * 100).toFixed(0)}%</span>
+                <span className="text-slate-600">➔</span>
+                <span className={`font-black ${isCritical ? 'text-red-400' : isHigh ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  +10m: {(pred.predictedDensity10min * 100).toFixed(0)}%
+                </span>
               </div>
             </div>
           );
@@ -70,7 +113,7 @@ export default function PredictionTimelineWidget({
 
       <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 pt-1">
         <span>Batch Forecast Interval: 30s</span>
-        <span className="text-red-400">Model $R^2 &gt; 0.88$ Verified</span>
+        <span className="text-red-400">Model R² &gt; 0.88 Verified</span>
       </div>
     </div>
   );
