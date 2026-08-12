@@ -7,6 +7,8 @@ import NodeTooltip from './NodeTooltip';
 interface CircuitMapProps {
   nodes?: NodeState[];
   edges?: EdgeState[];
+  optimalPath?: string[];
+  isSpectatorMode?: boolean;
   onNodeClick?: (nodeId: string) => void;
   onEdgeClick?: (edgeId: string) => void;
 }
@@ -37,7 +39,7 @@ const NODE_POSITIONS: Record<string, { x: number; y: number; label: string }> = 
 };
 
 // Fallback Default Node State Data
-const DEFAULT_NODES: NodeState[] = [
+export const DEFAULT_NODES: NodeState[] = [
   { id: 'GATE_A', type: 'gate', capacity: 6000, occupancy: 1200, densityRatio: 0.20, riskScore: 0.15, riskSeverity: 'SAFE' },
   { id: 'GATE_B', type: 'gate', capacity: 7200, occupancy: 2100, densityRatio: 0.29, riskScore: 0.22, riskSeverity: 'SAFE' },
   { id: 'GATE_C', type: 'gate', capacity: 6500, occupancy: 1800, densityRatio: 0.27, riskScore: 0.20, riskSeverity: 'SAFE' },
@@ -58,7 +60,7 @@ const DEFAULT_NODES: NodeState[] = [
   { id: 'PARKING', type: 'transport', capacity: 30000, occupancy: 4200, densityRatio: 0.14, riskScore: 0.11, riskSeverity: 'SAFE' },
 ];
 
-const DEFAULT_EDGES: EdgeState[] = [
+export const DEFAULT_EDGES: EdgeState[] = [
   { id: 'E1', from: 'GATE_A', to: 'FAN_ZONE', distance_m: 450, capacity_per_min: 220, flowRate: 85, isBlocked: false },
   { id: 'E2', from: 'GATE_B', to: 'MERCH', distance_m: 380, capacity_per_min: 240, flowRate: 90, isBlocked: false },
   { id: 'E3', from: 'GATE_C', to: 'FOOD_S', distance_m: 420, capacity_per_min: 220, flowRate: 75, isBlocked: false },
@@ -87,6 +89,8 @@ const DEFAULT_EDGES: EdgeState[] = [
 export default function CircuitMap({
   nodes = DEFAULT_NODES,
   edges = DEFAULT_EDGES,
+  optimalPath = [],
+  isSpectatorMode = false,
   onNodeClick = () => {},
   onEdgeClick = () => {},
 }: CircuitMapProps) {
@@ -150,19 +154,32 @@ export default function CircuitMap({
             const midX = (fromPos.x + toPos.x) / 2;
             const midY = (fromPos.y + toPos.y) / 2;
 
+            // Highlight optimal path
+            let isHighlighted = false;
+            if (optimalPath.length > 0) {
+              isHighlighted = optimalPath.some((nodeId, idx) => {
+                if (idx === optimalPath.length - 1) return false;
+                const nextNode = optimalPath[idx + 1];
+                return (edge.from === nodeId && edge.to === nextNode) || (edge.to === nodeId && edge.from === nextNode);
+              });
+            }
+
+            const opacity = isSpectatorMode && !isHighlighted ? "0.2" : "1";
+            const strokeColor = isBlocked ? '#FF1801' : isHighlighted ? '#10B981' : '#3D0D12';
+
             return (
-              <g key={edge.id} className="cursor-pointer" onClick={() => onEdgeClick(edge.id)}>
+              <g key={edge.id} className="cursor-pointer" onClick={() => onEdgeClick(edge.id)} style={{ opacity }}>
                 {/* Edge Path Line */}
                 <line
                   x1={fromPos.x}
                   y1={fromPos.y}
                   x2={toPos.x}
                   y2={toPos.y}
-                  stroke={isBlocked ? '#FF1801' : '#3D0D12'}
-                  strokeWidth={isBlocked ? 3 : 2}
+                  stroke={strokeColor}
+                  strokeWidth={isHighlighted ? 4 : isBlocked ? 3 : 2}
                   strokeDasharray={isBlocked ? '6 4' : 'none'}
                   markerEnd={isBlocked ? '' : 'url(#flow-arrow)'}
-                  className="transition-all duration-300 hover:stroke-red-400"
+                  className={isHighlighted ? "animate-pulse" : "transition-all duration-300 hover:stroke-red-400"}
                 />
 
                 {/* Animated Edge Flow Line if Active Flow */}
@@ -208,12 +225,16 @@ export default function CircuitMap({
             const colors = getNodeColor(nodeData.riskSeverity);
             const isSelected = selectedNodeId === id;
             const isCritical = nodeData.riskSeverity === 'CRITICAL';
+            
+            const isNodeHighlighted = optimalPath.includes(id);
+            const nodeOpacity = isSpectatorMode && !isNodeHighlighted ? "0.2" : "1";
 
             return (
               <g
                 key={id}
                 transform={`translate(${pos.x}, ${pos.y})`}
                 className="cursor-pointer group"
+                style={{ opacity: nodeOpacity }}
                 onClick={() => {
                   setSelectedNodeId(id);
                   onNodeClick(id);

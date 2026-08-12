@@ -137,6 +137,12 @@ export class WhatIfSandboxEngine {
     if (scenarioType === 'EDGE_E16_CLOSURE') {
       edgesToBlock.push('E16');
     }
+    if (scenarioType === 'METRO_STRIKE') {
+      edgesToBlock.push('E21');
+    }
+    if (scenarioType === 'FOOD_COURT_FIRE') {
+      edgesToBlock.push('E8', 'E9', 'E19');
+    }
 
     for (const edgeId of edgesToBlock) {
       sandboxGraph.blockEdge(edgeId);
@@ -149,6 +155,15 @@ export class WhatIfSandboxEngine {
     }
     if (scenarioType === 'MEDICAL_INCIDENT_GS_B') {
       nodeSurges.push({ node_id: 'GS_B', multiplier: 1.5 });
+    }
+    if (scenarioType === 'VIP_EVACUATION') {
+      nodeSurges.push({ node_id: 'GATE_VIP', occupancy: 0 });
+    }
+    if (scenarioType === 'FAN_ZONE_CRUSH') {
+      nodeSurges.push({ node_id: 'FAN_ZONE', multiplier: 1.5 });
+    }
+    if (scenarioType === 'FOOD_COURT_FIRE') {
+      nodeSurges.push({ node_id: 'FOOD_N', occupancy: 0 });
     }
 
     for (const surge of nodeSurges) {

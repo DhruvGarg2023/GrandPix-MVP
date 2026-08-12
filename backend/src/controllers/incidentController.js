@@ -65,11 +65,12 @@ export class IncidentController {
         return res.status(400).json({ error: 'Bad Request', message: `Invalid weather value '${value}'. Must be one of: ${validWeather.join(', ')}` });
       }
 
-      this.simEngine.activeWeather = {
+      this.simEngine.weatherOverride = {
         condition: value,
         intensity: value === 'heavy_rain' ? 0.9 : value === 'rain' ? 0.75 : value === 'cloudy' ? 0.25 : 0.1,
         speedMultiplier: value === 'heavy_rain' ? 0.70 : value === 'rain' ? 0.85 : value === 'cloudy' ? 0.95 : 1.0
       };
+      this.simEngine.activeWeather = this.simEngine.weatherOverride;
 
       const incidentPayload = {
         type,

@@ -16,6 +16,7 @@ import MapContainerShell from '@/components/dashboard/MapContainerShell';
 import RiskSummaryWidget from '@/components/dashboard/RiskSummaryWidget';
 import AICopilotWidget from '@/components/dashboard/AICopilotWidget';
 import PredictionTimelineWidget from '@/components/dashboard/PredictionTimelineWidget';
+import IncidentControlPanel from '@/components/dashboard/IncidentControlPanel';
 
 export default function DashboardPage() {
   const [simulationState, setSimulationState] = useState<SimulationTickPayload | null>(null);
@@ -135,7 +136,7 @@ export default function DashboardPage() {
       try {
         const incident: IncidentPayload = {
           time: simulationState?.simTime || '16:20',
-          type: 'ROUTE_CLOSURE',
+          type: 'route_closure',
           edge_id: rec.recommendedEdgeToBlock,
         };
         await api.triggerIncident('sim_default', incident);
@@ -143,6 +144,19 @@ export default function DashboardPage() {
       } catch (err: any) {
         console.error('Failed to apply reroute incident:', err);
       }
+    }
+  };
+
+  const handleManualIncident = async (payload: IncidentPayload) => {
+    try {
+      const incident = {
+        ...payload,
+        time: simulationState?.simTime || '16:20',
+      };
+      await api.triggerIncident('sim_default', incident);
+      setActiveIncident(incident);
+    } catch (err: any) {
+      console.error('Failed to trigger manual incident:', err);
     }
   };
 
@@ -187,7 +201,7 @@ export default function DashboardPage() {
       {/* Main 3-Column Dashboard Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Interactive Circuit Map Canvas */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <MapContainerShell
             nodes={simulationState?.nodes || []}
             edges={simulationState?.edges || []}
@@ -196,6 +210,12 @@ export default function DashboardPage() {
             activeAgents={simulationState?.agentsSummary?.total || 2000}
             activeIncident={activeIncident}
             onNodeSelect={(id) => setSelectedNodeId(id)}
+          />
+          
+          {/* Milestone 6: Manual Incident Controls */}
+          <IncidentControlPanel 
+            onTriggerIncident={handleManualIncident} 
+            disabled={!isConnected}
           />
         </div>
 

@@ -85,22 +85,31 @@ export const api = {
 
   // What-If Scenarios
   async runWhatIfScenario(id: string = 'sim_default', scenario: WhatIfScenarioRequest): Promise<WhatIfScenarioResponse> {
-    const data = await fetchJSON<{ success: boolean; comparison: WhatIfScenarioResponse }>(`/api/simulations/${id}/scenarios`, {
+    const data = await fetchJSON<WhatIfScenarioResponse>(`/api/simulations/${id}/scenarios`, {
       method: 'POST',
       body: JSON.stringify(scenario),
     });
-    return data.comparison;
+    return data;
   },
 
   // Spectator Endpoints
   async getSpectatorState(): Promise<SpectatorStateResponse> {
-    const data = await fetchJSON<{ success: boolean; spectatorState: SpectatorStateResponse }>('/api/spectator/state');
-    return data.spectatorState;
+    const data = await fetchJSON<SpectatorStateResponse>('/api/spectator/state');
+    return data;
   },
 
   async getSpectatorRoutes(from: string, to: string): Promise<SpectatorRouteResponse> {
-    const data = await fetchJSON<{ success: boolean; route: SpectatorRouteResponse }>(`/api/spectator/routes?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
-    return data.route;
+    const data = await fetchJSON<any>(`/api/spectator/routes?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    return {
+      origin: data.from,
+      destination: data.to,
+      optimalPath: data.path,
+      totalDistanceM: data.totalDistanceM,
+      estimatedWalkMinutes: data.estimatedWalkingTimeMin,
+      avoidsBlockedEdges: false,
+      warnings: [],
+      recommendedExit: data.recommendedExit
+    };
   },
 
   // AI Copilot

@@ -78,6 +78,7 @@ export class SimulationEngine {
       agent.status = (agent.currentNode === agent.destination) ? AgentStatus.ARRIVED : AgentStatus.WAITING;
     }
 
+    this.weatherOverride = null;
     this.activeEvent = this.scheduleManager.getActiveEvent(this.currentSeconds);
     this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
 
@@ -92,7 +93,7 @@ export class SimulationEngine {
     const prevEvent = this.activeEvent;
     
     this.activeEvent = this.scheduleManager.getActiveEvent(this.currentSeconds);
-    this.activeWeather = this.scheduleManager.getWeatherAt(this.currentSeconds);
+    this.activeWeather = this.weatherOverride || this.scheduleManager.getWeatherAt(this.currentSeconds);
 
     const graph = this.storage.getVenueGraphSync();
     const agents = Array.from(this.storage.agentsMap.values());

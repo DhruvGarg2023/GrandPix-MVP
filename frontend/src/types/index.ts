@@ -76,7 +76,7 @@ export interface RecommendationPayload {
 export interface IncidentPayload {
   id?: string;
   time: string;
-  type: 'ROUTE_CLOSURE' | 'WEATHER_SHIFT' | 'MEDICAL_EMERGENCY' | 'GATE_SHUTDOWN' | 'CROWD_SURGE';
+  type: 'route_closure' | 'weather_change' | 'medical_incident' | 'GATE_SHUTDOWN' | 'CROWD_SURGE';
   edge_id?: string;
   node_id?: string;
   value?: string | number;
@@ -101,26 +101,30 @@ export interface WhatIfScenarioRequest {
 }
 
 export interface WhatIfScenarioResponse {
-  scenarioId: string;
+  status: string;
   scenarioType: string;
-  executedAt: string;
-  baselineState: {
-    maxDensityNode: { id: string; density: number };
-    highRiskNodesCount: number;
-    criticalNodesCount: number;
-    averageQueueWaitMinutes: number;
+  simulatedTicks: number;
+  simulatedMinutes: number;
+  appliedChanges: any;
+  baseline: {
+    simTime: string;
+    activeEvent: string;
+    weather: string;
+    maxRiskScore: number;
+    highRiskNodeCount: number;
   };
-  scenarioState: {
-    maxDensityNode: { id: string; density: number };
-    highRiskNodesCount: number;
-    criticalNodesCount: number;
-    averageQueueWaitMinutes: number;
+  sandbox: {
+    simTime: string;
+    activeEvent: string;
+    weather: string;
+    maxRiskScore: number;
+    highRiskNodeCount: number;
   };
-  differentialSummary: {
-    densityDelta: number;
-    riskLevelChange: 'INCREASED' | 'DECREASED' | 'STABLE';
-    affectedNodes: string[];
-    recommendedMitigation?: string;
+  differential: {
+    riskDelta: number;
+    highRiskNodeCountDelta: number;
+    newlyImpactedNodes: string[];
+    recommendedMitigation: string;
   };
 }
 
@@ -145,4 +149,5 @@ export interface SpectatorRouteResponse {
   estimatedWalkMinutes: number;
   avoidsBlockedEdges: boolean;
   warnings: string[];
+  recommendedExit?: string;
 }
