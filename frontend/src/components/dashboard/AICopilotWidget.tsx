@@ -2,6 +2,7 @@
 
 import { RecommendationPayload } from '@/types';
 import { Bot, ArrowRight, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AICopilotWidgetProps {
   recommendation?: RecommendationPayload | null;
@@ -59,18 +60,32 @@ export default function AICopilotWidget({
       </div>
 
       {/* Main Recommendation Content */}
-      <div className="flex flex-col">
+      <div className="flex flex-col min-h-[220px]">
+        <AnimatePresence mode="wait">
         {isLoading ? (
-          <div className="py-8 flex flex-col items-center justify-center space-y-4">
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="py-8 flex flex-col items-center justify-center space-y-4 h-full my-auto"
+          >
             <div className="relative w-12 h-12 flex items-center justify-center">
               <div className="absolute inset-0 border-t-2 border-r-2 border-red-500 rounded-full animate-spin"></div>
               <div className="absolute inset-2 border-b-2 border-l-2 border-orange-500 rounded-full animate-spin border-opacity-70" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
               <Bot className="w-5 h-5 text-red-400 opacity-50" />
             </div>
             <span className="text-xs font-mono text-red-300/60 uppercase tracking-widest animate-pulse">Analyzing telemetry...</span>
-          </div>
+          </motion.div>
         ) : recommendation ? (
-          <div className="space-y-4 animate-in fade-in duration-500">
+          <motion.div 
+            key="recommendation"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="space-y-4"
+          >
             {/* Priority & Action Type Header */}
             <div className="flex items-center justify-between">
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${getPriorityBadge(recommendation.priority)}`}>
@@ -105,10 +120,16 @@ export default function AICopilotWidget({
                 </div>
               </button>
             )}
-          </div>
+          </motion.div>
         ) : (
           /* Default Monitoring State */
-          <div className="flex flex-col items-center justify-center space-y-4 py-6 animate-in fade-in duration-700">
+          <motion.div 
+            key="default"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex flex-col items-center justify-center space-y-4 py-6 h-full my-auto"
+          >
             <div className="w-16 h-16 rounded-full bg-emerald-950/30 flex items-center justify-center relative">
               <div className="absolute inset-0 rounded-full border border-emerald-500/20 animate-[ping_3s_ease-in-out_infinite]"></div>
               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
@@ -119,8 +140,9 @@ export default function AICopilotWidget({
                 AI prediction engine is actively analyzing crowd flow telemetry. No emergency rerouting required.
               </p>
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     </div>
   );

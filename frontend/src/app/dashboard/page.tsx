@@ -17,6 +17,7 @@ import RiskSummaryWidget from '@/components/dashboard/RiskSummaryWidget';
 import AICopilotWidget from '@/components/dashboard/AICopilotWidget';
 import PredictionTimelineWidget from '@/components/dashboard/PredictionTimelineWidget';
 import IncidentControlPanel from '@/components/dashboard/IncidentControlPanel';
+import { motion } from 'framer-motion';
 
 export default function DashboardPage() {
   const [simulationState, setSimulationState] = useState<SimulationTickPayload | null>(null);
@@ -201,7 +202,12 @@ export default function DashboardPage() {
       {/* Main 3-Column Dashboard Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Interactive Circuit Map Canvas */}
-        <div className="lg:col-span-2 space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          transition={{ duration: 0.5 }}
+          className="lg:col-span-2 space-y-6"
+        >
           <MapContainerShell
             nodes={simulationState?.nodes || []}
             edges={simulationState?.edges || []}
@@ -217,31 +223,42 @@ export default function DashboardPage() {
             onTriggerIncident={handleManualIncident} 
             disabled={!isConnected}
           />
-        </div>
+        </motion.div>
 
         {/* Right Column (1 Col): Risk Summary, AI Copilot, and Predictions Panels */}
-        <div className="space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          transition={{ duration: 0.5, staggerChildren: 0.1 }}
+          className="space-y-6"
+        >
           {/* Multi-Factor Venue Risk Widget */}
-          <RiskSummaryWidget
-            score={riskSummary?.nodes?.[0]?.riskScore || 0.18}
-            severity={riskSummary?.nodes?.[0]?.riskSeverity || 'SAFE'}
-            highestRiskNode={riskSummary?.highestRiskNode}
-            highRiskCount={riskSummary?.highRiskCount || 0}
-            criticalCount={riskSummary?.criticalCount || 0}
-          />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+            <RiskSummaryWidget
+              score={riskSummary?.nodes?.[0]?.riskScore || 0.18}
+              severity={riskSummary?.nodes?.[0]?.riskSeverity || 'SAFE'}
+              highestRiskNode={riskSummary?.highestRiskNode}
+              highRiskCount={riskSummary?.highRiskCount || 0}
+              criticalCount={riskSummary?.criticalCount || 0}
+            />
+          </motion.div>
 
           {/* AI Copilot Reasoner Panel */}
-          <AICopilotWidget
-            recommendation={recommendation}
-            onApplyAction={handleApplyReroute}
-          />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+            <AICopilotWidget
+              recommendation={recommendation}
+              onApplyAction={handleApplyReroute}
+            />
+          </motion.div>
 
           {/* 10-Min ML Density Forecast Timeline */}
-          <PredictionTimelineWidget
-            predictions={predictions?.predictions}
-            lastUpdated={simulationState?.simTime}
-          />
-        </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
+            <PredictionTimelineWidget
+              predictions={predictions?.predictions}
+              lastUpdated={simulationState?.simTime}
+            />
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

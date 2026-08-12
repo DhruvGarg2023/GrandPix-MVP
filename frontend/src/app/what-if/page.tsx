@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { WhatIfScenarioRequest, WhatIfScenarioResponse } from '@/types';
 import ScenarioComparisonWidget from '@/components/what-if/ScenarioComparisonWidget';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Play, FlaskConical, AlertTriangle, CloudRain, Ambulance, XOctagon, Flame, TrainFront, Users, ShieldAlert } from 'lucide-react';
 
 const SCENARIOS = [
@@ -74,7 +75,12 @@ export default function WhatIfStudioPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Scenario Selector Panel (1 Col) */}
-        <div className="lg:col-span-1 space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          transition={{ duration: 0.5 }}
+          className="lg:col-span-1 space-y-6"
+        >
           <div className="f1-card-crimson p-6 border-t-4 border-t-red-600">
             <h2 className="text-sm font-black text-white uppercase tracking-widest mb-6">Select Scenario</h2>
             
@@ -122,12 +128,17 @@ export default function WhatIfStudioPage() {
               )}
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Comparison Output (2 Cols) */}
-        <div className="lg:col-span-2">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="lg:col-span-2"
+        >
           <ScenarioComparisonWidget comparison={comparison} />
-        </div>
+        </motion.div>
 
       </div>
 

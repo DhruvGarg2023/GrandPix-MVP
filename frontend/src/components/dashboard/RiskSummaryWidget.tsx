@@ -2,6 +2,7 @@
 
 import { RiskSeverity, NodeState } from '@/types';
 import { AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface RiskSummaryWidgetProps {
   score?: number;
@@ -67,13 +68,22 @@ export default function RiskSummaryWidget({
       <div>
         <div className="flex justify-between text-xs font-mono text-slate-300 mb-1.5">
           <span>VENUE RISK SCORE</span>
-          <span className="font-extrabold text-white">{score.toFixed(2)} / 1.00</span>
+          <motion.span 
+            key={score}
+            initial={{ scale: 1.1, color: '#FFFFFF' }}
+            animate={{ scale: 1, color: '#FFFFFF' }}
+            className="font-extrabold text-white"
+          >
+            {score.toFixed(2)} / 1.00
+          </motion.span>
         </div>
         <div className="h-3 bg-[#0D0305] rounded-full overflow-hidden border border-red-900/40 p-0.5 shadow-inner">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${badgeStyle.barColor}`}
-            style={{ width: `${Math.min(100, Math.max(5, score * 100))}%` }}
-          ></div>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, Math.max(5, score * 100))}%` }}
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            className={`h-full rounded-full ${badgeStyle.barColor}`}
+          ></motion.div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { SpectatorStateResponse, SpectatorRouteResponse, NodeState, EdgeState } from '@/types';
 import CircuitMap, { DEFAULT_NODES, DEFAULT_EDGES } from '@/components/map/CircuitMap';
 import { MapPin, Navigation, Clock, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SpectatorPage() {
   const [spectatorState, setSpectatorState] = useState<SpectatorStateResponse | null>(null);
@@ -80,7 +81,12 @@ export default function SpectatorPage() {
     <div className="flex flex-col h-[calc(100vh-4rem)] p-4 md:p-6 lg:flex-row gap-6">
       
       {/* Left Panel: Route Controls */}
-      <div className="w-full lg:w-96 shrink-0 flex flex-col gap-6">
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }} 
+        animate={{ opacity: 1, x: 0 }} 
+        transition={{ duration: 0.4 }}
+        className="w-full lg:w-96 shrink-0 flex flex-col gap-6"
+      >
         <div className="f1-card-crimson p-6">
           <h2 className="text-xl font-black text-white uppercase tracking-widest mb-6 flex items-center">
             <Navigation className="w-5 h-5 mr-2 text-red-500" />
@@ -132,8 +138,27 @@ export default function SpectatorPage() {
         </div>
 
         {/* Route Summary Card */}
-        {route && (
-          <div className="f1-card-crimson p-6 animate-in fade-in slide-in-from-bottom-4">
+        <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="f1-card-crimson p-6 flex flex-col items-center justify-center space-y-4"
+          >
+            <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-xs font-mono text-red-400 animate-pulse tracking-widest">Calculating optimal path...</span>
+          </motion.div>
+        ) : route && (
+          <motion.div 
+            key="route"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="f1-card-crimson p-6"
+          >
             <h3 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-4 border-b border-red-950 pb-2">Route Summary</h3>
             
             <div className="flex items-center justify-between mb-4">
@@ -182,9 +207,10 @@ export default function SpectatorPage() {
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+        </AnimatePresence>
+      </motion.div>
 
       {/* Right Panel: Map */}
       <div className="flex-1 relative rounded-xl overflow-hidden border border-red-900/30">

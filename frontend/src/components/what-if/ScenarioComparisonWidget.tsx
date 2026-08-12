@@ -2,6 +2,7 @@
 
 import { WhatIfScenarioResponse } from '@/types';
 import { ArrowRight, AlertTriangle, ShieldCheck, Activity, BarChart2, TrendingUp, TrendingDown, Thermometer, Clock, Users, Zap, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface ScenarioComparisonWidgetProps {
   comparison: WhatIfScenarioResponse | null;
@@ -85,7 +86,12 @@ export default function ScenarioComparisonWidget({ comparison }: ScenarioCompari
                 <span className="text-white font-bold">{baseline.maxRiskScore.toFixed(3)}</span>
               </div>
               <div className="w-full bg-black/50 rounded-full h-2 border border-slate-800">
-                <div className="bg-slate-500 h-1.5 rounded-full" style={{ width: `${baselineRiskPct}%` }}></div>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${baselineRiskPct}%` }}
+                  transition={{ duration: 1, type: "spring" }}
+                  className="bg-slate-500 h-1.5 rounded-full" 
+                />
               </div>
             </div>
 
@@ -123,9 +129,19 @@ export default function ScenarioComparisonWidget({ comparison }: ScenarioCompari
                 </span>
               </div>
               <div className="w-full bg-black/50 rounded-full h-2 border border-slate-800 relative">
-                <div className={`${sandbox.maxRiskScore > baseline.maxRiskScore ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-emerald-500'} h-1.5 rounded-full transition-all duration-1000`} style={{ width: `${sandboxRiskPct}%` }}></div>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${sandboxRiskPct}%` }}
+                  transition={{ duration: 1.5, type: "spring", delay: 0.2 }}
+                  className={`${sandbox.maxRiskScore > baseline.maxRiskScore ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-emerald-500'} h-1.5 rounded-full`} 
+                />
                 {/* Ghost bar of baseline to show diff */}
-                <div className="absolute top-0 left-0 h-1.5 border-r-2 border-white/50 z-10" style={{ width: `${baselineRiskPct}%` }}></div>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${baselineRiskPct}%` }}
+                  transition={{ duration: 1, type: "spring" }}
+                  className="absolute top-0 left-0 h-1.5 border-r-2 border-white/50 z-10" 
+                />
               </div>
             </div>
 
