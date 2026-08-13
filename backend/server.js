@@ -3,10 +3,10 @@ import { createApp } from './src/app.js';
 import { config } from './src/config/env.js';
 import { SocketGateway } from './src/websocket/SocketGateway.js';
 
-const { app, simEngine } = createApp();
+const { app, simEngine, predictionAdapter } = createApp();
 
 const httpServer = http.createServer(app);
-const socketGateway = new SocketGateway(httpServer, simEngine);
+const socketGateway = new SocketGateway(httpServer, simEngine, predictionAdapter);
 
 // Bind socketGateway to app for route controllers if needed
 app.set('socketGateway', socketGateway);

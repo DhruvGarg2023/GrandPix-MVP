@@ -45,6 +45,9 @@ export default function DashboardPage() {
 
       const risks = await api.getRisks();
       setRiskSummary(risks);
+
+      const preds = await api.getPredictions();
+      setPredictions(preds);
     } catch (err: any) {
       console.warn('Backend connection fallback:', err.message);
       setError(err.message || 'Failed to connect to backend server');
