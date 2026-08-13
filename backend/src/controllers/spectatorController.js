@@ -65,6 +65,28 @@ export class SpectatorController {
     const walkingTimeSeconds = Math.round(totalDistanceM / Math.max(0.1, effectiveSpeedMps));
     const walkingTimeMinutes = parseFloat((walkingTimeSeconds / 60).toFixed(1));
 
+    let recommendedExit = to.startsWith('EXIT') ? to : 'EXIT_S';
+    
+    if (!to.startsWith('EXIT')) {
+      const allExits = graph.getNodes().filter(n => n.id.startsWith('EXIT')).map(n => n.id);
+      let shortestDist = Infinity;
+      
+      for (const exitId of allExits) {
+        const exitPath = this.router.findPath(graph, to, exitId);
+        if (exitPath && exitPath.length > 0) {
+          let dist = 0;
+          for (let i = 0; i < exitPath.length - 1; i++) {
+            const edge = graph.getEdgeBetween(exitPath[i], exitPath[i + 1]);
+            if (edge) dist += edge.distanceM;
+          }
+          if (dist < shortestDist) {
+            shortestDist = dist;
+            recommendedExit = exitId;
+          }
+        }
+      }
+    }
+
     res.json({
       from,
       to,
@@ -72,7 +94,7 @@ export class SpectatorController {
       totalDistanceM,
       estimatedWalkingTimeMin: walkingTimeMinutes,
       weatherCondition: weather?.condition || 'sunny',
-      recommendedExit: to.startsWith('EXIT') ? to : 'EXIT_S'
+      recommendedExit
     });
   };
 }
