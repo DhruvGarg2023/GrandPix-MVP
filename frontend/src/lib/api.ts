@@ -59,6 +59,13 @@ export const api = {
     return fetchJSON(`/api/simulations/${id}/reset`, { method: 'POST' });
   },
 
+  async setSimulationSpeed(id: string = 'sim_default', multiplier: number): Promise<{ success: boolean }> {
+    return fetchJSON(`/api/simulations/${id}/speed`, {
+      method: 'POST',
+      body: JSON.stringify({ multiplier }),
+    });
+  },
+
   async getSimulationState(id: string = 'sim_default'): Promise<SimulationTickPayload> {
     const data = await fetchJSON<any>(`/api/simulations/${id}/state`);
     return data.state || data;
@@ -75,9 +82,16 @@ export const api = {
     return data.risks || data;
   },
 
-  // Incident Trigger
-  async triggerIncident(id: string = 'sim_default', incident: IncidentPayload): Promise<{ success: boolean; incident: IncidentPayload }> {
+  // Incidents
+  async triggerIncident(id: string = 'sim_default', incident: Partial<IncidentPayload>): Promise<{ success: boolean; incident: IncidentPayload }> {
     return fetchJSON(`/api/simulations/${id}/incidents`, {
+      method: 'POST',
+      body: JSON.stringify(incident),
+    });
+  },
+
+  async resolveIncident(id: string = 'sim_default', incident: Partial<IncidentPayload>): Promise<{ success: boolean }> {
+    return fetchJSON(`/api/simulations/${id}/incidents/resolve`, {
       method: 'POST',
       body: JSON.stringify(incident),
     });

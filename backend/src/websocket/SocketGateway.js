@@ -18,9 +18,10 @@ export class SocketGateway {
     this.connectedClientsCount = 0;
     this.tickInterval = null;
     this.tickCounter = 0;
+    this.currentIntervalMs = config.simulationTickMs || 2000;
 
     this._setupSocketEvents();
-    this.startTickLoop(config.simulationTickMs || 2000);
+    this.startTickLoop();
   }
 
   _setupSocketEvents() {
@@ -46,7 +47,7 @@ export class SocketGateway {
     });
   }
 
-  startTickLoop(intervalMs = 2000) {
+  startTickLoop() {
     if (this.tickInterval) return;
     this.tickInterval = setInterval(async () => {
       if (this.simEngine && this.simEngine.isRunning) {
@@ -114,13 +115,25 @@ export class SocketGateway {
           }
         }
       }
-    }, intervalMs);
+    }, this.currentIntervalMs);
   }
 
   stopTickLoop() {
     if (this.tickInterval) {
       clearInterval(this.tickInterval);
       this.tickInterval = null;
+    }
+  }
+
+  updateSpeed(multiplier) {
+    const baseInterval = config.simulationTickMs || 2000;
+    // Calculate new interval (e.g., 5x = 400ms)
+    this.currentIntervalMs = Math.max(100, Math.floor(baseInterval / multiplier));
+    
+    // If currently running, restart the interval with new speed
+    if (this.tickInterval) {
+      this.stopTickLoop();
+      this.startTickLoop();
     }
   }
 
@@ -143,7 +156,11 @@ export class SocketGateway {
   }
 
   broadcastIncident(incidentPayload) {
-    this.io.emit('incident:created', incidentPayload);
+    this.io.emit('simulation:incident', incidentPayload);
+  }
+
+  broadcastIncidentResolved(payload) {
+    this.io.emit('simulation:incident_resolved', payload);
   }
 
   close() {

@@ -120,4 +120,36 @@ export class IncidentController {
 
     res.status(400).json({ error: 'Bad Request', message: 'Unhandled incident type' });
   };
+
+  resolveIncident = async (req, res) => {
+    const { type, edge_id } = req.body || {};
+
+    if (!type || typeof type !== 'string') {
+      return res.status(400).json({ error: 'Bad Request', message: "Field 'type' is required." });
+    }
+
+    const graph = this.storage.getVenueGraphSync();
+    const gateway = this._getSocketGateway(req);
+    let resolved = false;
+
+    if (type === 'route_closure' && edge_id) {
+      resolved = graph.unblockEdge(edge_id);
+    } else if (type === 'weather_change') {
+      this.simEngine.weatherOverride = null;
+      this.simEngine.activeWeather = this.simEngine.scheduleWeatherManager?.currentWeather || { condition: 'sunny', intensity: 0.1, speedMultiplier: 1.0 };
+      resolved = true;
+    } else if (type === 'medical_incident') {
+      resolved = true;
+    }
+
+    if (resolved) {
+      if (gateway) {
+        gateway.broadcastIncidentResolved({ type, edge_id, timestamp: new Date().toISOString() });
+        gateway.broadcastTick(this.simEngine.getState());
+      }
+      return res.status(200).json({ status: 'ok', message: `Incident type '${type}' resolved successfully.` });
+    }
+
+    res.status(400).json({ error: 'Bad Request', message: `Failed to resolve incident of type '${type}'` });
+  };
 }

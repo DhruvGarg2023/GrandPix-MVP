@@ -53,6 +53,19 @@ export class SimulationController {
     }
   };
 
+  setSimulationSpeed = async (req, res) => {
+    try {
+      const { multiplier } = req.body;
+      const gateway = req.app?.get('socketGateway');
+      if (gateway && multiplier) {
+        gateway.updateSpeed(multiplier);
+      }
+      res.json({ status: 'ok', message: `Speed updated to ${multiplier}x`, multiplier });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update simulation speed', message: err.message });
+    }
+  };
+
   getSimulationState = async (req, res) => {
     try {
       const state = this.simEngine.getState();

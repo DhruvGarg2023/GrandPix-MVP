@@ -164,6 +164,15 @@ export default function DashboardPage() {
     }
   };
 
+  const handleResolveIncident = async (payload: Partial<IncidentPayload>) => {
+    try {
+      await api.resolveIncident('sim_default', payload);
+      setActiveIncident(null);
+    } catch (err: any) {
+      console.error('Failed to resolve manual incident:', err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top F1 Race Control Header */}
@@ -183,7 +192,10 @@ export default function DashboardPage() {
         onStart={handleStart}
         onPause={handlePause}
         onReset={handleReset}
-        onSpeedChange={(spd) => setSpeedMultiplier(spd)}
+        onSpeedChange={(spd) => {
+          setSpeedMultiplier(spd);
+          api.setSimulationSpeed('sim_default', spd).catch(err => console.error(err));
+        }}
       />
 
       {/* Backend Offline Error Notification */}
@@ -224,6 +236,7 @@ export default function DashboardPage() {
           {/* Milestone 6: Manual Incident Controls */}
           <IncidentControlPanel 
             onTriggerIncident={handleManualIncident} 
+            onResolveIncident={handleResolveIncident}
             disabled={!isConnected}
           />
         </motion.div>
