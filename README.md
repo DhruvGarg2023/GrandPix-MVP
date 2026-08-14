@@ -23,6 +23,9 @@ The **F1 Crowd Intelligence Platform** solves this by creating a real-time **Dig
 
 ## 🏗️ System Architecture & Data Flow
 
+![System Architecture](docs/images/architecture.png)
+*A visual overview of the GrandPrix MVP architecture, featuring the three decoupled microservices.*
+
 The MVP operates across three main decoupled components:
 
 1. **Simulation Engine & Main Backend (Node.js / Express / Socket.IO)**
