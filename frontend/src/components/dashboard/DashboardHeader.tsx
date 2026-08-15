@@ -37,11 +37,16 @@ export default function DashboardHeader({
   const getWeatherIcon = (cond: string) => {
     switch (cond) {
       case 'rain':
+      case 'light_rain':
         return '🌧️ Rain';
       case 'heavy_rain':
         return '⛈️ Heavy Rain';
       case 'cloudy':
+      case 'partly_cloudy':
+      case 'overcast':
         return '☁️ Cloudy';
+      case 'clear':
+      case 'sunny':
       default:
         return '☀️ Sunny';
     }
@@ -84,7 +89,9 @@ export default function DashboardHeader({
           {/* Weather Badge */}
           <div className="bg-[#0D0305] border border-red-900/60 text-red-200 px-3 py-1.5 rounded-lg flex items-center space-x-2">
             <span>{getWeatherIcon(weather.condition)}</span>
-            <span className="text-[10px] text-slate-400">({(weather.intensity * 100).toFixed(0)}%)</span>
+            <span className="text-[10px] text-slate-400">
+              ({((weather.rain_probability ?? weather.intensity ?? 0.1) * 100).toFixed(0)}%)
+            </span>
           </div>
 
           {/* Socket Gateway Connection Indicator */}

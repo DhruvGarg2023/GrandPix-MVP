@@ -1,19 +1,22 @@
-import { RecommendationService } from '../ai/RecommendationService.js';
 
 export class AIController {
   constructor(simEngine, predictionAdapter) {
     this.simEngine = simEngine;
     this.predictionAdapter = predictionAdapter;
-    this.recService = new RecommendationService();
   }
 
-  getCopilotRecommendation = async (req, res) => {
+  analyzeSituation = async (req, res) => {
     try {
-      const state = this.simEngine.getState();
-      const featureItems = state.nodes.map(n => ({
+      const gateway = req.app?.get('socketGateway');
+      if (!gateway || !gateway.aiTriggerController) {
+        return res.status(500).json({ error: 'AI Trigger Controller not initialized' });
+      }
+
+      const simState = this.simEngine.getState();
+      const featureItems = simState.nodes.map(n => ({
         zone: n.id,
-        event: state.activeEvent,
-        weather: state.weather?.condition || 'sunny',
+        event: simState.activeEvent,
+        weather: simState.weather?.condition || 'sunny',
         attendance: 120000.0,
         current_density_ratio: n.densityRatio,
         flow_rate_ratio: 0.5,
@@ -22,18 +25,31 @@ export class AIController {
       }));
 
       const predictionsMap = await this.predictionAdapter.predictBatch(featureItems);
-      const { recommendation, candidateActions } = await this.recService.getRecommendation(state, null, predictionsMap);
+      
+      const highRiskNodes = simState.nodes.filter(
+        n => n.riskScore >= 0.50 || n.riskSeverity === 'HIGH' || n.riskSeverity === 'CRITICAL'
+      );
+      const risksPayload = {
+        simulationId: simState.simulationId,
+        timestamp: new Date().toISOString(),
+        highRiskCount: highRiskNodes.length,
+        nodes: simState.nodes.map(n => ({
+          id: n.id,
+          riskScore: n.riskScore,
+          riskSeverity: n.riskSeverity,
+        }))
+      };
 
-      const gateway = req.app?.get('socketGateway');
-      if (gateway && recommendation) {
+      const recommendation = await gateway.aiTriggerController.processManualRequest(simState, risksPayload, predictionsMap);
+
+      if (recommendation) {
         gateway.broadcastRecommendation(recommendation);
       }
 
       res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        recommendation,
-        candidateActions
+        recommendation
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to generate AI copilot recommendation', message: err.message });

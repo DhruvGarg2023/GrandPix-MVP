@@ -40,9 +40,6 @@ export default function DashboardPage() {
       setIsConnected(true);
       setError(null);
 
-      const rec = await api.getAICopilotRecommendation();
-      setRecommendation(rec);
-
       const risks = await api.getRisks();
       setRiskSummary(risks);
 
@@ -259,11 +256,18 @@ export default function DashboardPage() {
             />
           </motion.div>
 
-          {/* AI Copilot Reasoner Panel */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
             <AICopilotWidget
               recommendation={recommendation}
               onApplyAction={handleApplyReroute}
+              onManualAnalyze={async () => {
+                try {
+                  const rec = await api.getAICopilotRecommendation();
+                  setRecommendation(rec);
+                } catch (err) {
+                  console.error('Failed to get manual AI recommendation:', err);
+                }
+              }}
             />
           </motion.div>
 

@@ -128,7 +128,7 @@ export const api = {
 
   // AI Copilot
   async getAICopilotRecommendation(id: string = 'sim_default'): Promise<RecommendationPayload> {
-    const data = await fetchJSON<{ success: boolean; recommendation: RecommendationPayload }>('/api/ai/copilot', {
+    const data = await fetchJSON<{ success: boolean; recommendation: RecommendationPayload }>('/api/ai/analyze', {
       method: 'POST',
       body: JSON.stringify({ simulationId: id }),
     });

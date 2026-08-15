@@ -26,8 +26,10 @@ export interface EdgeState {
 }
 
 export interface WeatherState {
-  condition: 'sunny' | 'cloudy' | 'rain' | 'heavy_rain';
-  intensity: number;
+  condition: string;
+  intensity?: number;
+  rain_probability?: number;
+  temperature_c?: number;
 }
 
 export interface SimulationTickPayload {

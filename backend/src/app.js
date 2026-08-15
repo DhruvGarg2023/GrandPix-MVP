@@ -74,7 +74,7 @@ export function createApp(dataPath = '../data') {
   app.get('/api/spectator/routes', spectatorController.getSpectatorRoute);
 
   // 6. AI Copilot Recommendation
-  app.post('/api/ai/copilot', aiController.getCopilotRecommendation);
+  app.post('/api/ai/analyze', aiController.analyzeSituation);
 
   // Global Error Handler
   app.use((err, req, res, next) => {

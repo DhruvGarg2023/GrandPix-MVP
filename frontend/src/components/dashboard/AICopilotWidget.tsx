@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { RecommendationPayload } from '@/types';
 import { Bot, ArrowRight, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,14 +8,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AICopilotWidgetProps {
   recommendation?: RecommendationPayload | null;
   onApplyAction?: (rec: RecommendationPayload) => void;
+  onManualAnalyze?: () => Promise<void>;
   isLoading?: boolean;
 }
 
 export default function AICopilotWidget({
   recommendation,
   onApplyAction = () => {},
+  onManualAnalyze = async () => {},
   isLoading = false,
 }: AICopilotWidgetProps) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   // Priority Tag Helper
   const getPriorityBadge = (prio: string = 'MEDIUM') => {
     switch (prio) {
@@ -143,6 +147,34 @@ export default function AICopilotWidget({
           </motion.div>
         )}
         </AnimatePresence>
+      </div>
+
+      {/* Manual Request Action */}
+      <div className="pt-2 border-t border-red-950/60 mt-4 flex justify-between items-center">
+        <span className="text-[10px] text-red-300/40 uppercase tracking-widest font-mono">
+          Last Check: {recommendation ? 'Recent' : 'N/A'}
+        </span>
+        <button
+          onClick={async () => {
+            setIsAnalyzing(true);
+            await onManualAnalyze();
+            setIsAnalyzing(false);
+          }}
+          disabled={isLoading || isAnalyzing}
+          className="text-[10px] font-bold tracking-wider uppercase text-red-400 bg-red-950/40 hover:bg-red-900/60 transition-colors px-3 py-1.5 rounded border border-red-900/50 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isAnalyzing ? (
+            <>
+              <div className="w-3 h-3 border-t-2 border-r-2 border-red-500 rounded-full animate-spin"></div>
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Bot className="w-3 h-3" />
+              Analyze Situation
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

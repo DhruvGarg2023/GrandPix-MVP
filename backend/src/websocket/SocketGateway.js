@@ -1,5 +1,7 @@
 import { Server } from 'socket.io';
 import { config } from '../config/env.js';
+import { RecommendationService } from '../ai/RecommendationService.js';
+import { AiTriggerController } from '../ai/AiTriggerController.js';
 
 /**
  * SocketGateway handles real-time Socket.IO communication and aggregated broadcasting.
@@ -19,6 +21,9 @@ export class SocketGateway {
     this.tickInterval = null;
     this.tickCounter = 0;
     this.currentIntervalMs = config.simulationTickMs || 2000;
+
+    // AI Trigger Controller for Event-Driven AI
+    this.aiTriggerController = new AiTriggerController(new RecommendationService(), this);
 
     this._setupSocketEvents();
     this.startTickLoop();
@@ -54,11 +59,12 @@ export class SocketGateway {
         const simState = this.simEngine.tick();
         this.broadcastTick(simState);
 
+        let risksPayload = null;
         if (simState && simState.nodes) {
           const highRiskNodes = simState.nodes.filter(
             n => n.riskScore >= 0.50 || n.riskSeverity === 'HIGH' || n.riskSeverity === 'CRITICAL'
           );
-          const risksPayload = {
+          risksPayload = {
             simulationId: simState.simulationId,
             timestamp: new Date().toISOString(),
             highRiskCount: highRiskNodes.length,
@@ -110,6 +116,12 @@ export class SocketGateway {
               timestamp: simState.simTime || new Date().toISOString(),
               predictions: formattedPredictions
             });
+
+            // Trigger AI evaluation asynchronously
+            if (this.aiTriggerController) {
+              this.aiTriggerController.evaluateState(simState, risksPayload, predictionsMap);
+            }
+
           } catch (err) {
             console.error('[SocketGateway] ML Prediction fetch failed:', err);
           }
