@@ -139,7 +139,7 @@ export default function IncidentControlPanel({
         {/* VIP Gate Delay */}
         <button
           disabled={disabled || loadingType === 'VIP_DELAY'}
-          onClick={() => handleToggle('medical_incident', 'VIP_DELAY', { type: 'medical_incident' as any, node_id: 'VIP_GATE' })}
+          onClick={() => handleToggle('medical_incident', 'VIP_DELAY', { type: 'medical_incident' as any, node_id: 'GATE_VIP' })}
           className={getButtonClasses('VIP_DELAY', 'purple')}
         >
           <div className="absolute inset-0 bg-purple-600/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
